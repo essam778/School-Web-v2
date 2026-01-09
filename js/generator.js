@@ -124,8 +124,8 @@ function selectStudent(student, itemEl) {
     try {
         new QRCode(qrCodeEl, {
             text: student.id,
-            width: 150,
-            height: 150,
+            width: 120,
+            height: 120,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
