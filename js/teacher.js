@@ -131,7 +131,8 @@ async function loadTeacherData(uid) {
         }
 
         const classesCount = currentTeacher.classes ? currentTeacher.classes.length : 0;
-        document.getElementById('totalClasses').textContent = classesCount;
+        // document.getElementById('totalClasses').textContent = classesCount; // Removed as element doesn't exist
+
 
     } catch (error) {
         FirebaseHelpers.logError('Load Teacher', error);
@@ -145,6 +146,7 @@ async function loadStatistics() {
         const classesCount = currentTeacher.classes ? currentTeacher.classes.length : 0;
         animateCounter('classesCount', classesCount);
 
+        // Update Students Count
         let totalStudents = 0;
         if (currentTeacher.classes && currentTeacher.classes.length > 0) {
             for (const classId of currentTeacher.classes) {
@@ -156,16 +158,18 @@ async function loadStatistics() {
                 totalStudents += studentsSnap.size;
             }
         }
-        animateCounter('totalStudents', totalStudents);
+        animateCounter('studentsCount', totalStudents);
 
+        // Update Assignments Count (if element exists, otherwise skip)
         const assignmentsQuery = query(
             collection(db, 'assignments'),
             where('teacherId', '==', currentTeacher.id),
             where('status', '==', 'active')
         );
         const assignmentsSnap = await getDocs(assignmentsQuery);
-        animateCounter('assignmentsCount', assignmentsSnap.size);
+        // animateCounter('assignmentsCount', assignmentsSnap.size); // Element removed from HTML
 
+        // Update Today's Attendance
         const today = new Date().toISOString().split('T')[0];
         const attendanceQuery = query(
             collection(db, 'attendance'),
@@ -175,19 +179,23 @@ async function loadStatistics() {
 
         const attendanceSnap = await getDocs(attendanceQuery);
         let presentCount = 0;
-        let totalAttendance = 0;
 
         attendanceSnap.forEach(doc => {
             const data = doc.data();
             if (data.status === 'present') presentCount++;
-            totalAttendance++;
         });
 
-        const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
-        document.getElementById('attendanceRate').textContent = `${attendanceRate}%`;
+        // Update todayAttendance element
+        const todayAttendanceEl = document.getElementById('todayAttendance');
+        if (todayAttendanceEl) {
+            todayAttendanceEl.textContent = presentCount;
+        }
 
-        const avgGrade = 85;
-        document.getElementById('averageGrade').textContent = `${avgGrade}%`;
+        // Placeholder for todaySessionsCount (can be implemented with schedule logic later)
+        const todaySessionsEl = document.getElementById('todaySessionsCount');
+        if (todaySessionsEl) {
+            todaySessionsEl.textContent = '0'; // Default for now
+        }
 
     } catch (error) {
         FirebaseHelpers.logError('Load Statistics', error);

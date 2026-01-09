@@ -1040,139 +1040,129 @@
 
     <main class="main-content" id="main-content">
         <div class="container">
-            <div class="welcome-section">
-                <h2>مرحباً، <span id="welcomeName">أستاذ</span> 👨‍🏫</h2>
-                <p>إدارة فصولك وطلابك من لوحة تحكم واحدة</p>
-
-                <div class="welcome-details">
-                    <div>
-                        <i class="fas fa-book"></i>
-                        <span>المادة: <strong id="teacherSubject">-</strong></span>
+            <div id="statsSection">
+                <div class="welcome-section">
+                    <h2>مرحباً، <span id="welcomeName">المعلم</span> 👋</h2>
+                    <div class="welcome-details">
+                        <div id="teacherSubject"><i class="fas fa-book"></i> --</div>
+                        <div id="teacherEmail"><i class="fas fa-envelope"></i> --</div>
+                        <div id="currentDate"><i class="fas fa-calendar-alt"></i> --</div>
                     </div>
-                    <div>
-                        <div id="statsSection">
-                            <div class="welcome-section">
-                                <h2>مرحباً، <span id="welcomeName">المعلم</span> 👋</h2>
-                                <div class="welcome-details">
-                                    <div id="teacherSubject"><i class="fas fa-book"></i> --</div>
-                                    <div id="teacherEmail"><i class="fas fa-envelope"></i> --</div>
-                                    <div id="currentDate"><i class="fas fa-calendar-alt"></i> --</div>
-                                </div>
-                            </div>
+                </div>
 
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-chalkboard"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3>عدد الفصول</h3>
-                                        <div class="number" id="classesCount">0</div>
-                                    </div>
-                                </div>
-
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-user-graduate"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3>إجمالي الطلاب</h3>
-                                        <div class="number" id="studentsCount">0</div>
-                                    </div>
-                                </div>
-
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3>حصص اليوم</h3>
-                                        <div class="number" id="todaySessionsCount">0</div>
-                                    </div>
-                                </div>
-
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clipboard-check"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3>حضور اليوم</h3>
-                                        <div class="number" id="todayAttendance">0</div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chalkboard"></i>
                         </div>
-
-                        <h2 class="section-title">
-                            <i class="fas fa-bolt"></i>
-                            إجراءات سريعة
-                        </h2>
-
-                        <div class="quick-actions">
-                            <div class="action-card" onclick="selectSubject()">
-                                <i class="fas fa-book"></i>
-                                <h3>تحديد المادة</h3>
-                                <p>اختر المادة التي تدرسها</p>
-                            </div>
-
-                            <div class="action-card" onclick="selectClasses()">
-                                <i class="fas fa-door-open"></i>
-                                <h3>اختيار الفصول</h3>
-                                <p>أضف أو أزل الفصول التي تدرسها</p>
-                            </div>
-
-                            <div class="action-card" onclick="showAssignmentModal()">
-                                <i class="fas fa-tasks"></i>
-                                <h3>إنشاء واجب</h3>
-                                <p>أضف واجب جديد للطلاب مع تحديد موعد التسليم</p>
-                            </div>
-
-                            <div class="action-card" onclick="showGradesModal()">
-                                <i class="fas fa-chart-line"></i>
-                                <h3>إدخال الدرجات</h3>
-                                <p>سجل درجات الطلاب في الامتحانات والواجبات</p>
-                            </div>
-
-                            <div class="action-card" onclick="takeAttendance()">
-                                <i class="fas fa-calendar-check"></i>
-                                <h3>تسجيل الحضور</h3>
-                                <p>سجل حضور الطلاب في الفصل</p>
-                            </div>
+                        <div class="stat-info">
+                            <h3>عدد الفصول</h3>
+                            <div class="number" id="classesCount">0</div>
                         </div>
+                    </div>
 
-                        <h2 class="section-title">
-                            <i class="fas fa-calendar-alt"></i>
-                            إدارة الجدول الأسبوعي
-                        </h2>
-
-                        <div class="schedule-management">
-                            <div class="action-card" onclick="createWeeklySchedule()">
-                                <i class="fas fa-plus-circle"></i>
-                                <h3>إنشاء جدول جديد</h3>
-                                <p>أنشئ جدولًا أسبوعيًا للفصول التي تدرّسها</p>
-                            </div>
-
-                            <div class="action-card" onclick="viewCurrentSchedule()">
-                                <i class="fas fa-eye"></i>
-                                <h3>عرض الجدول الحالي</h3>
-                                <p>اعرض وتعديل الجدول الأسبوعي الحالي</p>
-                            </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-graduate"></i>
                         </div>
+                        <div class="stat-info">
+                            <h3>إجمالي الطلاب</h3>
+                            <div class="number" id="studentsCount">0</div>
+                        </div>
+                    </div>
 
-                        <div id="classesSection">
-                            <h2 class="section-title">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                                فصولي الدراسية
-                            </h2>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>حصص اليوم</h3>
+                            <div class="number" id="todaySessionsCount">0</div>
+                        </div>
+                    </div>
 
-                            <div id="classesContainer" class="classes-grid">
-                                <div class="loading">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>حضور اليوم</h3>
+                            <div class="number" id="todayAttendance">0</div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <h2 class="section-title">
+                <i class="fas fa-bolt"></i>
+                إجراءات سريعة
+            </h2>
+
+            <div class="quick-actions">
+                <div class="action-card" onclick="selectSubject()">
+                    <i class="fas fa-book"></i>
+                    <h3>تحديد المادة</h3>
+                    <p>اختر المادة التي تدرسها</p>
+                </div>
+
+                <div class="action-card" onclick="selectClasses()">
+                    <i class="fas fa-door-open"></i>
+                    <h3>اختيار الفصول</h3>
+                    <p>أضف أو أزل الفصول التي تدرسها</p>
+                </div>
+
+                <div class="action-card" onclick="showAssignmentModal()">
+                    <i class="fas fa-tasks"></i>
+                    <h3>إنشاء واجب</h3>
+                    <p>أضف واجب جديد للطلاب مع تحديد موعد التسليم</p>
+                </div>
+
+                <div class="action-card" onclick="showGradesModal()">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>إدخال الدرجات</h3>
+                    <p>سجل درجات الطلاب في الامتحانات والواجبات</p>
+                </div>
+
+                <div class="action-card" onclick="takeAttendance()">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>تسجيل الحضور</h3>
+                    <p>سجل حضور الطلاب في الفصل</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">
+                <i class="fas fa-calendar-alt"></i>
+                إدارة الجدول الأسبوعي
+            </h2>
+
+            <div class="schedule-management">
+                <div class="action-card" onclick="createWeeklySchedule()">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>إنشاء جدول جديد</h3>
+                    <p>أنشئ جدولًا أسبوعيًا للفصول التي تدرّسها</p>
+                </div>
+
+                <div class="action-card" onclick="viewCurrentSchedule()">
+                    <i class="fas fa-eye"></i>
+                    <h3>عرض الجدول الحالي</h3>
+                    <p>اعرض وتعديل الجدول الأسبوعي الحالي</p>
+                </div>
+            </div>
+
+            <div id="classesSection">
+                <h2 class="section-title">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    فصولي الدراسية
+                </h2>
+
+                <div id="classesContainer" class="classes-grid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
     </main>
 
     <!-- Subject Selection Modal -->
