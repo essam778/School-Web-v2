@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="نظام إدارة مدرسي إلكتروني شامل لإدارة الطلاب والمعلمين والدروس والدرجات">
+    <title>تسجيل الدخول - النظام المدرسي الإلكتروني</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(126, 34, 206, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.03) 49%, rgba(255,255,255,0.03) 51%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, rgba(255,255,255,0.03) 49%, rgba(255,255,255,0.03) 51%, transparent 52%);
+            background-size: 30px 30px;
+            animation: moveGrid 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 30px); }
+        }
+        
+        /* Performance and Accessibility Optimizations */
+        img, svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Optimize animations */
+        .info-icon {
+            will-change: transform;
+        }
+        
+        /* Ensure proper focus management */
+        button, input, select, a {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            transition: outline-color 0.2s ease;
+        }
+        
+        button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link for accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #667eea;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        /* Reduce motion for users who prefer it */
+        @media (prefers-reduced-motion: reduce) {
+            .info-icon {
+                animation: none;
+                transition: none;
+            }
+            
+            body::after {
+                animation: none;
+            }
+            
+            .info-panel::before,
+            .info-panel::after {
+                animation: none;
+            }
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 1;
+            animation: slideIn 0.6s ease;
+            margin: 20px 0;
+            max-height: calc(100vh - 40px);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Right Side - Info Panel */
+        .info-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 60px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: calc(100vh - 40px);
+        }
+
+        /* Custom Scrollbar for info panel */
+        .info-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .info-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .info-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        .info-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .info-panel::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            right: -100px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .info-panel::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -80px;
+            left: -80px;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .info-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .info-icon {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: rotate(-5deg);
+            transition: transform 0.4s ease;
+        }
+
+        .info-icon:hover {
+            transform: rotate(5deg) scale(1.05);
+        }
+
+        .info-icon i {
+            font-size: 60px;
+            color: white;
+        }
+
+        .info-content h2 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .info-content p {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .info-features {
+            display: grid;
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(-5px);
+        }
+
+        .feature-item i {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-item span {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* Left Side - Login Form */
+        .login-container {
+            padding: 60px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: white;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: calc(100vh - 40px);
+        }
+
+        /* Custom Scrollbar for login container */
+        .login-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .login-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .login-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+        }
+
+        .login-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            color: #1a202c;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        .login-header p {
+            font-size: 15px;
+            color: #718096;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 16px;
+            color: #a0aec0;
+            transition: all 0.3s;
+            pointer-events: none;
+            font-size: 16px;
+        }
+
+        .input-wrapper:focus-within .input-icon {
+            color: #667eea;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px 48px 14px 16px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .form-group input {
+            direction: ltr;
+            text-align: left;
+        }
+
+        .form-group select {
+            direction: rtl;
+            text-align: right;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%23667eea' d='M7 10L2 5h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: left 16px center;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select:hover,
+        .form-group input:hover {
+            border-color: #cbd5e0;
+            background: white;
+        }
+
+        .password-toggle {
+            position: absolute;
+            left: 16px;
+            cursor: pointer;
+            color: #a0aec0;
+            transition: color 0.3s;
+            font-size: 16px;
+            padding: 8px;
+        }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .remember-me label {
+            font-size: 14px;
+            color: #4a5568;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            font-size: 14px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .forgot-link:hover {
+            color: #764ba2;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .login-btn:hover:not(:disabled)::before {
+            left: 100%;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .login-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .error-message {
+            display: none;
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #fc8181;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .login-footer p {
+            font-size: 13px;
+            color: #a0aec0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .login-wrapper {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+            }
+
+            .info-panel {
+                display: none;
+            }
+
+            .login-container {
+                padding: 40px 30px;
+                max-height: calc(100vh - 40px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .login-wrapper {
+                margin: 10px 0;
+                max-height: calc(100vh - 20px);
+            }
+
+            .login-container {
+                padding: 30px 20px;
+                max-height: calc(100vh - 20px);
+            }
+
+            .login-header h1 {
+                font-size: 24px;
+            }
+
+            .form-group input,
+            .form-group select,
+            .login-btn {
+                padding: 12px 40px 12px 14px;
+            }
+        }
+
+        /* Laptop/Desktop screens with smaller heights */
+        @media (max-height: 800px) {
+            .login-container {
+                padding: 40px 50px;
+                justify-content: flex-start;
+            }
+
+            .info-panel {
+                padding: 40px 50px;
+            }
+
+            .login-header {
+                margin-bottom: 30px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .info-icon {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 20px;
+            }
+
+            .info-icon i {
+                font-size: 50px;
+            }
+
+            .info-content h2 {
+                font-size: 28px;
+                margin-bottom: 15px;
+            }
+
+            .info-content p {
+                font-size: 15px;
+                margin-bottom: 20px;
+            }
+
+            .info-features {
+                margin-top: 30px;
+                gap: 12px;
+            }
+        }
+
+        /* Very small laptop screens */
+        @media (max-height: 700px) {
+            .login-container,
+            .info-panel {
+                padding: 30px 40px;
+            }
+
+            .login-header {
+                margin-bottom: 20px;
+            }
+
+            .login-header h1 {
+                font-size: 24px;
+            }
+
+            .form-group {
+                margin-bottom: 18px;
+            }
+
+            .info-icon {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 15px;
+            }
+
+            .info-icon i {
+                font-size: 40px;
+            }
+
+            .info-content h2 {
+                font-size: 24px;
+            }
+
+            .info-features {
+                margin-top: 20px;
+            }
+
+            .feature-item {
+                padding: 12px 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        *:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main class="main-content" id="main-content">
+    <div class="login-wrapper" role="main">
+        <!-- Info Panel -->
+        <div class="info-panel">
+            <div class="info-content">
+                <div class="info-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2>مرحباً بك في<br>النظام المدرسي الإلكتروني</h2>
+                <p>منصة تعليمية متكاملة لإدارة العملية التعليمية بكفاءة وسهولة</p>
+                
+                <div class="info-features">
+                    <div class="feature-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>أمان وحماية عالية للبيانات</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-users"></i>
+                        <span>إدارة شاملة للطلاب والمعلمين</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>تقارير وإحصائيات متقدمة</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>متوافق مع جميع الأجهزة</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Form -->
+        <div class="login-container">
+            <div class="login-header">
+                <h1>تسجيل الدخول</h1>
+                <p>أدخل بياناتك للوصول إلى حسابك</p>
+            </div>
+
+            <form id="loginForm" novalidate>
+                <div class="form-group">
+                    <label for="role">نوع الحساب</label>
+                    <div class="input-wrapper">
+                        <select id="role" required name="role">
+                            <option value="" disabled selected>اختر نوع الحساب...</option>
+                            <option value="student">🎓 طالب</option>
+                            <option value="teacher">👨‍🏫 معلم</option>
+                            <option value="manager">📈 مدير مدرسة</option>
+                            <option value="admin">🔐 مدير نظام</option>
+                        </select>
+                        <i class="fas fa-user-tag input-icon" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email"
+                            placeholder="example@school.com"
+                            required
+                            autocomplete="email"
+                        >
+                        <i class="fas fa-envelope input-icon" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password"
+                            placeholder="••••••••"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <i class="fas fa-lock input-icon" aria-hidden="true"></i>
+                        <i class="fas fa-eye password-toggle" id="togglePassword" role="button" tabindex="0" aria-label="إظهار كلمة المرور"></i>
+                    </div>
+                </div>
+
+                <div class="remember-forgot">
+                    <div class="remember-me">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <label for="rememberMe">تذكرني</label>
+                    </div>
+                    <a href="#" class="forgot-link" aria-label="استعادة كلمة المرور">نسيت كلمة المرور؟</a>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <span>تسجيل الدخول</span>
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                </button>
+            </form>
+
+            <div class="loading" id="loading" role="status" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <p class="loading-text">جاري تسجيل الدخول...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage" role="alert" aria-live="assertive"></div>
+
+            <div class="login-footer">
+                <p>© 2024 النظام المدرسي الإلكتروني - جميع الحقوق محفوظة</p>
+            </div>
+        </div>
+    </div>
+    </main>
+    
+    <script type="module" src="js/auth.js"></script>
+</body>
+</html>
