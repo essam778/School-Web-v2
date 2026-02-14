@@ -7,11 +7,21 @@
     <meta name="description"
         content="النظام المدرسي الإلكتروني المتكامل - الحل الأمثل لإدارة المدرسة، المعلمين، والطلاب">
     <title>النظام المدرسي الإلكتروني - الريادة في التعليم الرقمي</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="image"
+        href="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" media="print"
+        onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+        media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/global.css">
-    <script src="js/theme.js"></script>
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'dark';
+            if (theme === 'light') document.documentElement.classList.add('light-theme');
+        })();
+    </script>
     <style>
         :root {
             /* Inherited from global.css */
@@ -57,6 +67,14 @@
             background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--glass-border);
+            transition: all 0.4s ease;
+        }
+
+        .mobile-toggle {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--light);
         }
 
         .logo {
@@ -75,6 +93,43 @@
             display: flex;
             gap: 30px;
             align-items: center;
+        }
+
+        @media (max-width: 968px) {
+            nav {
+                padding: 15px 5%;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .nav-links {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 70%;
+                height: 100vh;
+                background: var(--dark);
+                flex-direction: column;
+                justify-content: center;
+                transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+                z-index: 1001;
+                padding: 40px;
+            }
+
+            .nav-links.active {
+                right: 0;
+            }
+
+            .nav-links a {
+                font-size: 20px;
+                width: 100%;
+                text-align: right;
+                border-bottom: 1px solid var(--glass-border);
+                padding-bottom: 15px;
+            }
         }
 
         .nav-links a {
@@ -190,7 +245,6 @@
             border-radius: 20px;
             box-shadow: -50px 50px 100px rgba(0, 0, 0, 0.5);
             border: 1px solid var(--glass-border);
-            animation: float 6s ease-in-out infinite;
         }
 
         @keyframes float {
@@ -238,7 +292,7 @@
             margin-bottom: 20px;
         }
 
-        .stat-card h3 {
+        .stat-card h2 {
             font-size: 24px;
             margin-bottom: 5px;
         }
@@ -306,7 +360,7 @@
             color: var(--secondary);
         }
 
-        .problem-item h4 {
+        .problem-item h3 {
             font-size: 22px;
             margin-bottom: 15px;
             color: var(--secondary);
@@ -420,7 +474,7 @@
             max-width: 300px;
         }
 
-        .footer-links h5 {
+        .footer-links h3 {
             font-size: 18px;
             margin-bottom: 25px;
         }
@@ -492,6 +546,55 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Critical Animations */
+        @keyframes fadeInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .anim-fade-right {
+            animation: fadeInRight 0.8s ease-out forwards;
+        }
+
+        .anim-zoom {
+            animation: zoomIn 0.8s ease-out forwards;
+        }
+
+        .anim-fade-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
     </style>
 </head>
 
@@ -503,19 +606,23 @@
             <i class="fas fa-graduation-cap"></i>
             <span>إتقان التعليمي</span>
         </div>
-        <div class="nav-links">
-            <div class="nav-links">
-                <a href="#features">المميزات</a>
-                <a href="#about">عن المنصة</a>
-                <div id="themeToggle" style="cursor: pointer; font-size: 18px; color: var(--warning); margin: 0 10px;">
-                    <i class="fas fa-moon"></i>
-                </div>
-                <a href="login.html" class="login-btn-top">دخول المنصة</a>
-            </div>
+        <button class="mobile-toggle" onclick="toggleMenu()" aria-label="القائمة">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="nav-links" id="navLinks">
+            <a href="#features" onclick="toggleMenu()">المميزات</a>
+            <a href="#about" onclick="toggleMenu()">عن المنصة</a>
+            <button id="themeToggle"
+                style="background:none; border:none; cursor:pointer; font-size:18px; color:var(--warning); margin:0 10px;"
+                aria-label="تبديل الوضع">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="login.html" class="login-btn-top">دخول المنصة</a>
+        </div>
     </nav>
 
     <section class="hero">
-        <div class="hero-content animate__animated animate__fadeInRight">
+        <div class="hero-content anim-fade-right">
             <h1>منظومة تعليمية ذكية<br>لمستقبل أفضل.</h1>
             <p>حلول رقمية متكاملة تربط بين الإدارة، المعلم، وولي الأمر لضمان تجربة تعليمية سلسة ونتائج مبهرة للطلاب.</p>
             <div class="cta-group">
@@ -523,37 +630,38 @@
                     ابدأ الآن مجاناً
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                <a href="#" onclick="openParentModal()" class="btn-main btn-parent">
+                <button onclick="openParentModal()" class="btn-main btn-parent" style="cursor: pointer;">
                     بوابة ولي الأمر
                     <i class="fas fa-user-friends"></i>
-                </a>
+                </button>
             </div>
         </div>
-        <div class="hero-image animate__animated animate__zoomIn">
+        <div class="hero-image">
             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000"
-                alt="Dashboard Preview" class="dashboard-preview">
+                alt="لوحة تحكم النظام المدرسي الإلكتروني" class="dashboard-preview" fetchpriority="high"
+                loading="eager">
         </div>
     </section>
 
     <div class="stats-row" id="features">
-        <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+        <div class="stat-card anim-fade-up" style="animation-delay: 0.1s">
             <i class="fas fa-shield-check"></i>
-            <h3>أمان تام</h3>
+            <h2>أمان تام</h2>
             <p>تشفير كامل لكافة بيانات الطلاب والنتائج</p>
         </div>
-        <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+        <div class="stat-card anim-fade-up" style="animation-delay: 0.2s">
             <i class="fas fa-bolt"></i>
-            <h3>سرعة فائقة</h3>
+            <h2>سرعة فائقة</h2>
             <p>أداء مستقر وسريع في تسجيل الحضور والدرجات</p>
         </div>
-        <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+        <div class="stat-card anim-fade-up" style="animation-delay: 0.3s">
             <i class="fas fa-chart-pie"></i>
-            <h3>تحليلات دقيقة</h3>
+            <h2>تحليلات دقيقة</h2>
             <p>تقارير ذكية مدعومة بالذكاء الاصطناعي</p>
         </div>
-        <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+        <div class="stat-card anim-fade-up" style="animation-delay: 0.4s">
             <i class="fas fa-users"></i>
-            <h3>تواصل مستمر</h3>
+            <h2>تواصل مستمر</h2>
             <p>ربط مباشر بين المدرسة والمنزل</p>
         </div>
     </div>
@@ -566,29 +674,29 @@
         <div class="problem-grid">
             <div class="problem-item">
                 <div class="problem-icon"><i class="fas fa-clock"></i></div>
-                <h4>هدر الوقت في الحضور</h4>
+                <h3>هدر الوقت في الحضور</h3>
                 <p>وداعاً للطرق التقليدية، نظامنا يوفر تقنيات متطورة لتسجيل الحضور بضغطة زر وتوثيق البيانات لحظياً.</p>
             </div>
             <div class="problem-item">
                 <div class="problem-icon"><i class="fas fa-unlink"></i></div>
-                <h4>فجوة التواصل</h4>
+                <h3>فجوة التواصل</h3>
                 <p>نربط ولي الأمر بكافة تفاصيل ابنه (حضور، درجات، سلوك) لحظة بلحظة دون الحاجة للمتابعة الهاتفية.</p>
             </div>
             <div class="problem-item">
                 <div class="problem-icon"><i class="fas fa-file-invoice"></i></div>
-                <h4>تراكم الأوراق والبيانات</h4>
+                <h3>تراكم الأوراق والبيانات</h3>
                 <p>أتمتة كاملة لكافة السجلات الورقية، مع إمكانية استخراج التقارير والنتائج بضغطة زر واحدة.</p>
             </div>
         </div>
     </section>
 
     <!-- Parent Login Modal -->
-    <div class="modal" id="parentModal">
+    <div class="modal" id="parentModal" aria-labelledby="modalTitle" role="dialog" aria-modal="true">
         <div class="modal-content">
-            <i class="fas fa-times close-modal" onclick="closeParentModal()"></i>
+            <i class="fas fa-times close-modal" onclick="closeParentModal()" aria-label="إغلاق" role="button"></i>
             <div class="modal-header">
                 <i class="fas fa-user-shield"></i>
-                <h2>دخول ولي الأمر</h2>
+                <h2 id="modalTitle">دخول ولي الأمر</h2>
                 <p>يرجى إدخال كود الطالب الخاص بابنك للوصول للوحة المتابعة</p>
             </div>
             <form class="parent-form" id="parentLoginForm">
@@ -613,7 +721,7 @@
                 <p>المنصة الرائدة في إدارة المؤسسات التعليمية وتطوير أداء الطلاب والمعلمين في العالم العربي.</p>
             </div>
             <div class="footer-links">
-                <h5>روابط سريعة</h5>
+                <h3>روابط سريعة</h3>
                 <ul>
                     <li><a href="login.html">تسجيل الدخول</a></li>
                     <li><a href="#">بوابة ولي الأمر</a></li>
@@ -622,52 +730,69 @@
                 </ul>
             </div>
             <div class="footer-links">
-                <h5>الدعم الفني</h5>
+                <h3>الدعم الفني</h3>
                 <ul>
                     <li><a href="#">مركز المساعدة</a></li>
                     <li><a href="#">سياسة الخصوصية</a></li>
                     <li><a href="#">شروط الاستخدام</a></li>
                 </ul>
             </div>
-            <div class="footer-links">
-                <h5>تواصل معنا</h5>
-                <div style="display: flex; gap: 15px; margin-top: 10px;">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                </div>
-            </div>
+        </div>
+        </div>
         </div>
         <div class="copyright">
             <p>© 2024 إتقان التعليمي. جميع الحقوق محفوظة.</p>
             <p>صنع بشغف لمستقبل أفضل</p>
         </div>
     </footer>
-
-    <div id="footer"></div>
-
     <script>
-        // Modal functions
-        window.openParentModal = function () {
-            document.getElementById('parentModal').classList.add('active');
-        };
-        window.closeParentModal = function () {
-            document.getElementById('parentModal').classList.remove('active');
-        };
+        // Theme Toggle Implementation
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('themeToggle');
+            if (toggleBtn) {
+                const icon = toggleBtn.querySelector('i');
+                const updateIcon = (isLight) => {
+                    if (icon) icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+                };
+                updateIcon(document.documentElement.classList.contains('light-theme'));
+                toggleBtn.addEventListener('click', () => {
+                    const isLight = document.documentElement.classList.toggle('light-theme');
+                    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                    updateIcon(isLight);
+                });
+            }
+        });
 
-        // Effect for navbar scroll
-        window.onscroll = function () {
-            var nav = document.querySelector('nav');
-            if (window.pageYOffset > 50) {
-                nav.style.padding = '15px 8%';
-                nav.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
-            } else {
-                nav.style.padding = '20px 8%';
-                nav.style.boxShadow = 'none';
+        // Modal and Dynamic Script Loading
+        let parentScriptLoaded = false;
+        window.openParentModal = () => {
+            document.getElementById('parentModal').classList.add('active');
+            if (!parentScriptLoaded) {
+                // Dynamically inject the module only when needed
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.src = 'js/parentAuth.js';
+                document.body.appendChild(script);
+                parentScriptLoaded = true;
             }
         };
+        window.closeParentModal = () => document.getElementById('parentModal').classList.remove('active');
+
+        // Nav Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            const scrolled = window.scrollY > 50;
+            nav.style.padding = scrolled ? '15px 8%' : '20px 8%';
+            nav.style.background = scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(15, 23, 42, 0.8)';
+            if (scrolled) nav.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+            else nav.style.boxShadow = 'none';
+        });
+
+        function toggleMenu() {
+            const navLinks = document.getElementById('navLinks');
+            if (window.innerWidth <= 968) navLinks.classList.toggle('active');
+        }
     </script>
-    <script type="module" src="js/parentAuth.js"></script>
 </body>
 
 </html>

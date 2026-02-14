@@ -1,12 +1,4 @@
 // js/parentAuth.js
-import { db, FirebaseHelpers } from './firebaseConfig.js';
-import {
-    collection,
-    query,
-    where,
-    getDocs,
-    limit
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     const parentLoginForm = document.getElementById('parentLoginForm');
@@ -23,8 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Show loading
                 submitBtn.disabled = true;
+                const originalBtnText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
                 parentLoginError.style.display = 'none';
+
+                // Lazy load Firebase dependencies
+                const { db } = await import('./firebaseConfig.js');
+                const {
+                    collection,
+                    query,
+                    where,
+                    getDocs,
+                    limit
+                } = await import("https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js");
 
                 // Look for student with this code
                 const q = query(
@@ -44,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Success! Store session
                 sessionStorage.setItem('currentUser', JSON.stringify({
-                    uid: studentId, // Using student DB ID as UID for parent session
+                    uid: studentId,
                     studentCode: studentData.studentCode,
                     fullName: studentData.fullName,
                     role: 'parent',
@@ -58,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error('Parent Login Error:', error);
-                parentLoginError.textContent = error.message;
+                parentLoginError.textContent = error.message === 'Failed to fetch dynamically imported module'
+                    ? 'مشكلة في الاتصال بالخادم. يرجى المحاولة لاحقاً.'
+                    : error.message;
                 parentLoginError.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'دخول اللوحة <i class="fas fa-sign-in-alt"></i>';

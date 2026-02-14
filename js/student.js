@@ -1037,7 +1037,17 @@ window.showStudentQRCode = async function () {
         // Add print function to window
         window.printStudentCard = function () {
             const cardElement = document.getElementById('studentCardPrint');
+            const qrCanvas = document.querySelector('#qrCodeContainer canvas');
             if (!cardElement) return;
+
+            // Capture QR code as data URL if it's a canvas
+            let qrImageData = '';
+            if (qrCanvas) {
+                qrImageData = qrCanvas.toDataURL('image/png');
+            } else {
+                const qrImg = document.querySelector('#qrCodeContainer img');
+                if (qrImg) qrImageData = qrImg.src;
+            }
 
             const printWindow = window.open('', '', 'height=600,width=800');
             printWindow.document.write(`
@@ -1046,129 +1056,67 @@ window.showStudentQRCode = async function () {
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>بطاقة الحضور</title>
+                    <title>بطاقة الحضور - إتقان التعليمي</title>
                     <style>
-                        * {
-                            margin: 0;
-                            padding: 0;
-                            box-sizing: border-box;
-                        }
-                        body {
-                            font-family: 'Cairo', sans-serif;
-                            padding: 20px;
-                            background: white;
-                        }
-                        @media print {
-                            body {
-                                margin: 0;
-                                padding: 0;
-                            }
-                        }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Cairo', sans-serif; padding: 40px; background: white; }
                         .card-container {
-                            max-width: 600px;
+                            max-width: 500px;
                             margin: 0 auto;
-                            background: white;
-                            border: 2px solid #27ae60;
-                            border-radius: 12px;
+                            border: 3px solid #27ae60;
+                            border-radius: 20px;
                             padding: 30px;
                             text-align: center;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
                         }
-                        .card-header {
-                            margin-bottom: 20px;
-                            border-bottom: 2px solid #27ae60;
-                            padding-bottom: 15px;
-                        }
-                        .student-name {
-                            margin: 10px 0;
-                            color: #27ae60;
-                            font-size: 24px;
-                            font-weight: bold;
-                        }
-                        .info-grid {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr;
-                            gap: 15px;
-                            margin-top: 15px;
-                            font-size: 14px;
-                        }
-                        .info-item {
-                            padding: 10px;
-                        }
-                        .info-label {
-                            color: #7f8c8d;
-                            margin-bottom: 5px;
-                            font-size: 12px;
-                        }
-                        .info-value {
-                            font-weight: bold;
-                            color: #2c3e50;
-                            font-size: 14px;
-                        }
-                        .qr-code-section {
-                            display: flex;
-                            justify-content: center;
-                            margin: 25px 0;
-                            padding: 20px;
-                        }
-                        .qr-code-section img,
-                        .qr-code-section canvas {
-                            max-width: 280px;
-                            height: auto;
-                        }
-                        .card-footer {
-                            margin-top: 20px;
-                            padding-top: 15px;
-                            border-top: 1px solid #ecf0f1;
-                            font-size: 12px;
-                            color: #95a5a6;
-                        }
+                        .student-name { color: #27ae60; font-size: 28px; font-weight: 800; margin-bottom: 20px; }
+                        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: right; margin-bottom: 25px; border-top: 1px solid #eee; padding-top: 20px; }
+                        .info-label { color: #888; font-size: 13px; }
+                        .info-value { font-weight: bold; color: #333; font-size: 16px; }
+                        .qr-section { background: white; padding: 20px; display: flex; justify-content: center; margin: 20px 0; border: 1px solid #eee; border-radius: 15px; }
+                        .qr-section img { width: 200px; height: 200px; }
+                        .footer { font-size: 12px; color: #999; margin-top: 20px; }
                         @media print {
-                            body {
-                                margin: 0;
-                            }
-                            .card-container {
-                                border: 3px solid #27ae60;
-                                page-break-after: avoid;
-                            }
+                            body { padding: 0; }
+                            .card-container { box-shadow: none; border: 4px solid #27ae60; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="card-container">
-                        <div class="card-header">
-                            <div class="student-name">${currentStudent.fullName}</div>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <div class="info-label">الفصل</div>
-                                    <div class="info-value">${className}</div>
-                                </div>
-                                <div class="info-item">
-                                    <div class="info-label">الصف</div>
-                                    <div class="info-value">${gradeLevel}</div>
-                                </div>
-                                <div class="info-item">
-                                    <div class="info-label">السنة الدراسية</div>
-                                    <div class="info-value">${academicYear}-${academicYear + 1}</div>
-                                </div>
-                                <div class="info-item">
-                                    <div class="info-label">الرقم الأكاديمي</div>
-                                    <div class="info-value">${studentData?.studentCode || 'N/A'}</div>
-                                </div>
+                        <div class="student-name">${currentStudent.fullName}</div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">اسم الفصل</div>
+                                <div class="info-value">${className}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">الصف</div>
+                                <div class="info-value">${gradeLevel}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">كود الطالب</div>
+                                <div class="info-value">${studentData?.studentCode || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">تاريخ الإصدار</div>
+                                <div class="info-value">${new Date().toLocaleDateString('ar-EG')}</div>
                             </div>
                         </div>
-                        <div class="qr-code-section">
-                            ${cardElement.querySelector('#qrCodeContainer')?.innerHTML || ''}
+                        <div class="qr-section">
+                            <img src="${qrImageData}" alt="QR Code">
                         </div>
-                        <div class="card-footer">
-                            <p>أظهر هذه البطاقة للمعلم لتسجيل الحضور</p>
+                        <div class="footer">
+                            <p>أظهر هذه البطاقة للمعلم لتسجيل الحضور اليومي</p>
+                            <p style="margin-top:5px; font-weight:bold; color:#27ae60;">نظام إتقان التعليمي</p>
                         </div>
                     </div>
                     <script>
                         window.onload = function() {
-                            window.print();
-                            window.onafterprint = function() {
-                                window.close();
-                            };
+                            setTimeout(() => {
+                                window.print();
+                                window.onafterprint = () => window.close();
+                            }, 500);
                         };
                     </script>
                 </body>

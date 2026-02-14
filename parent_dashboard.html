@@ -330,26 +330,11 @@
             background: var(--danger);
             color: white;
         }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(100%);
-            }
-
-            .main-content {
-                margin-right: 0;
-                padding: 20px;
-            }
-
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
@@ -402,29 +387,33 @@
     <main class="main-content">
         <!-- Navbar -->
         <nav class="navbar">
-            <div class="user-info">
-                <div class="user-avatar" id="studentInitial">S</div>
-                <div>
-                    <h4 id="studentDisplayName">اسم الطالب</h4>
-                    <span class="student-badge" id="studentCodeDisplay">ST-0000</span>
-                </div>
-            </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div id="aiReportBanner" style="display: none;">
-                    <button class="btn-main" onclick="checkAIReport()"
-                        style="padding: 10px 20px; font-size: 13px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
-                        <i class="fas fa-robot"></i> تقرير AI جديد
+                <button class="mobile-nav-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="user-info">
+                    <div class="user-avatar" id="studentInitial">S</div>
+                    <div>
+                        <h4 id="studentDisplayName">اسم الطالب</h4>
+                        <span class="student-badge" id="studentCodeDisplay">ST-0000</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div id="aiReportBanner" style="display: none;">
+                        <button class="btn-main" onclick="checkAIReport()"
+                            style="padding: 10px 20px; font-size: 13px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
+                            <i class="fas fa-robot"></i> تقرير AI جديد
+                        </button>
+                    </div>
+
+                    <div class="theme-toggle" id="themeToggle" title="تبديل الوضع الليلي">
+                        <i class="fas fa-moon"></i>
+                    </div>
+
+                    <button class="btn-logout-nav" onclick="logoutUser()">
+                        <i class="fas fa-sign-out-alt"></i> خروج
                     </button>
                 </div>
-
-                <div class="theme-toggle" id="themeToggle" title="تبديل الوضع الليلي">
-                    <i class="fas fa-moon"></i>
-                </div>
-
-                <button class="btn-logout-nav" onclick="logoutUser()">
-                    <i class="fas fa-sign-out-alt"></i> خروج
-                </button>
-            </div>
         </nav>
 
         <!-- Summary Section -->

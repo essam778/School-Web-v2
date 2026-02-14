@@ -940,11 +940,16 @@
             display: block;
         }
 
-        /* Responsive Sidebar */
-        @media (max-width: 768px) {
+        @media (max-width: 968px) {
             .sidebar {
                 width: 280px;
-                left: -280px;
+                right: -280px;
+                left: auto;
+            }
+
+            .sidebar.active {
+                right: 0;
+                left: auto;
             }
 
             .hamburger-menu {

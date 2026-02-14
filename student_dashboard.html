@@ -1352,6 +1352,96 @@
         </div>
     </main>
 
+    <!-- View Assignment Modal -->
+    <div id="viewAssignmentModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title">تفاصيل الواجب</h3>
+                <button class="close-btn" onclick="closeModal('viewAssignmentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="assignmentDetailsContent">
+                    <div class="form-group">
+                        <label for="assignmentTitle">عنوان الواجب</label>
+                        <input type="text" id="assignmentTitle" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentSubject">المادة</label>
+                        <input type="text" id="assignmentSubject" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentTeacher">المعلم</label>
+                        <input type="text" id="assignmentTeacher" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentDescription">الوصف</label>
+                        <textarea id="assignmentDescription" class="form-control" rows="4" readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentDueDate">موعد التسليم</label>
+                        <input type="text" id="assignmentDueDate" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentMaxScore">الدرجة العظمى</label>
+                        <input type="text" id="assignmentMaxScore" class="form-control" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewAssignmentModal')">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Grade Modal -->
+    <div id="viewGradeModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title">تفاصيل الدرجة</h3>
+                <button class="close-btn" onclick="closeModal('viewGradeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="gradeDetailsContent">
+                    <div class="form-group">
+                        <label for="gradeSubject">المادة</label>
+                        <input type="text" id="gradeSubject" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeType">نوع التقييم</label>
+                        <input type="text" id="gradeType" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeScore">الدرجة</label>
+                        <input type="text" id="gradeScore" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeMaxScore">الدرجة العظمى</label>
+                        <input type="text" id="gradeMaxScore" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradePercentage">النسبة المئوية</label>
+                        <input type="text" id="gradePercentage" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeTeacher">المعلم</label>
+                        <input type="text" id="gradeTeacher" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeDate">تاريخ التقييم</label>
+                        <input type="text" id="gradeDate" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="gradeNotes">ملاحظات</label>
+                        <textarea id="gradeNotes" class="form-control" rows="3" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewGradeModal')">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Elements... -->
     <style>
         /* Modal Styles */
