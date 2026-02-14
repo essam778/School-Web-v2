@@ -12,6 +12,8 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
     </noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <script src="js/theme.js"></script>
     <style>
         * {
             margin: 0;
@@ -21,7 +23,8 @@
 
         body {
             font-family: 'Cairo', sans-serif;
-            background: #f5f7fa;
+            background: var(--main-bg);
+            color: var(--text-main);
             min-height: 100vh;
         }
 
@@ -65,6 +68,25 @@
             display: flex;
             align-items: center;
             gap: 20px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--warning);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
         }
 
         .user-avatar {
@@ -1059,6 +1081,12 @@
             }
         }
     </style>
+    <!-- QR Libraries (must load BEFORE module scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@1.3.0/dist/html5-qrcode.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+    <!-- Module Scripts (after external libraries) -->
     <script type="module" src="js/dashboardGuard.js"></script>
 </head>
 
@@ -1076,31 +1104,31 @@
         </div>
         <ul class="sidebar-menu">
             <li>
-                <a href="#" onclick="scrollToSection('welcomeSection'); closeSidebar();">
+                <a href="#" onclick="showSection('summarySection'); closeSidebar();" id="link-summary">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>لوحة التحكم</span>
                 </a>
             </li>
             <li>
-                <a href="#" onclick="scrollToSection('assignmentsContainer'); closeSidebar();">
+                <a href="#" onclick="showSection('assignmentsSection'); closeSidebar();" id="link-assignments">
                     <i class="fas fa-tasks"></i>
                     <span>الواجبات</span>
                 </a>
             </li>
             <li>
-                <a href="#" onclick="scrollToSection('gradesContainer'); closeSidebar();">
+                <a href="#" onclick="showSection('gradesSection'); closeSidebar();" id="link-grades">
                     <i class="fas fa-chart-line"></i>
                     <span>الدرجات</span>
                 </a>
             </li>
             <li>
-                <a href="#" onclick="scrollToSection('weeklySchedule'); closeSidebar();">
+                <a href="#" onclick="showSection('scheduleSection'); closeSidebar();" id="link-schedule">
                     <i class="fas fa-calendar-week"></i>
                     <span>الجدول الأسبوعي</span>
                 </a>
             </li>
             <li>
-                <a href="#" onclick="scrollToSection('studentClass'); closeSidebar();">
+                <a href="#" onclick="showSection('studentClassSection'); closeSidebar();" id="link-studentClass">
                     <i class="fas fa-school"></i>
                     <span>معلومات الفصل</span>
                 </a>
@@ -1109,6 +1137,12 @@
                 <a href="#" onclick="showStudentQRCode(); closeSidebar();">
                     <i class="fas fa-qrcode"></i>
                     <span>رمز الحضور</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('announcementsSection'); closeSidebar();" id="link-announcements">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>الإعلانات المدرسية</span>
                 </a>
             </li>
             <li>
@@ -1135,97 +1169,154 @@
         </div>
 
         <div class="user-menu">
-            <div class="user-avatar" id="userAvatar">ط</div>
-            <div class="user-info">
-                <h3 id="userName">الطالب</h3>
-                <p id="studentCode">الرقم: -</p>
+            <div id="themeToggle" class="theme-toggle-btn" title="تبديل الوضع">
+                <i class="fas fa-moon"></i>
             </div>
+            <div class="user-avatar" id="userAvatar">S</div>
+            <div class="user-info">
+                <h3 id="userName">اسم الطالب</h3>
+                <p id="studentCode">الرقم: -</p>
+                <p id="userEmail" style="display: none;">البريد الإلكتروني</p>
+            </div>
+            <button class="logout-btn" onclick="logoutUser()">
+                <i class="fas fa-sign-out-alt"></i> خروج
+            </button>
         </div>
     </nav>
 
     <main class="main-content" id="main-content">
         <div class="container">
-            <div class="welcome-section">
-                <h2>مرحباً، <span id="welcomeName">طالب</span> 🎓</h2>
-                <p>تابع دراستك ونتائجك من لوحة تحكم واحدة</p>
+            <div id="summarySection">
+                <div class="welcome-section">
+                    <h2>مرحباً، <span id="welcomeName">طالب</span> 🎓</h2>
+                    <p>تابع دراستك ونتائجك من لوحة تحكم واحدة</p>
 
-                <div class="student-details">
-                    <div class="detail-item">
-                        <div class="label"><i class="fas fa-school"></i> المرحلة</div>
-                        <div class="value" id="studentGrade">-</div>
+                    <div class="student-details">
+                        <div class="detail-item">
+                            <div class="label"><i class="fas fa-school"></i> المرحلة</div>
+                            <div class="value" id="studentGrade">-</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label"><i class="fas fa-door-open"></i> الفصل</div>
+                            <div class="value" id="studentClassDisplay">-</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label"><i class="fas fa-hashtag"></i> رقم الجلوس</div>
+                            <div class="value" id="seatNumber">-</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label"><i class="fas fa-calendar-day"></i> اليوم الدراسي</div>
+                            <div class="value" id="schoolDay">-</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="label"><i class="fas fa-door-open"></i> الفصل</div>
-                        <div class="value" id="studentClass">-</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>نسبة الحضور</h3>
+                            <div class="number" id="attendanceRate">0%</div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="label"><i class="fas fa-hashtag"></i> رقم الجلوس</div>
-                        <div class="value" id="seatNumber">-</div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>المعدل التراكمي</h3>
+                            <div class="number" id="gpaScore">0</div>
+                            <div id="performanceTrend"></div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="label"><i class="fas fa-calendar-day"></i> اليوم الدراسي</div>
-                        <div class="value" id="schoolDay">-</div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>الواجبات المعلقة</h3>
+                            <div class="number" id="pendingAssignments">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>عدد المواد</h3>
+                            <div class="number" id="totalSubjects">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clipboard-check"></i>
+            <div id="scheduleSection" style="display: none;">
+                <h2 class="section-title">
+                    <div class="title-content">
+                        <i class="fas fa-calendar-week"></i>
+                        <span>الجدول الأسبوعي</span>
                     </div>
-                    <div class="stat-info">
-                        <h3>نسبة الحضور</h3>
-                        <div class="number" id="attendanceRate">0%</div>
+                </h2>
+
+                <div class="schedule-section">
+                    <div class="schedule-header">
+                        <h3>الجدول الدراسي الأسبوعي</h3>
+                    </div>
+
+                    <div class="schedule-container">
+                        <div class="week-schedule" id="weeklySchedule">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>المعدل التراكمي</h3>
-                        <div class="number" id="gpaScore">0</div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
+            <div id="assignmentsSection" style="display: none;">
+                <h2 class="section-title">
+                    <div class="title-content">
                         <i class="fas fa-tasks"></i>
+                        <span>الواجبات القادمة</span>
                     </div>
-                    <div class="stat-info">
-                        <h3>الواجبات المعلقة</h3>
-                        <div class="number" id="pendingAssignments">0</div>
-                    </div>
-                </div>
+                </h2>
 
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>عدد المواد</h3>
-                        <div class="number" id="totalSubjects">0</div>
+                <div id="assignmentsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
                     </div>
                 </div>
             </div>
 
-            <h2 class="section-title">
-                <div class="title-content">
-                    <i class="fas fa-calendar-week"></i>
-                    <span>الجدول الأسبوعي</span>
-                </div>
-                <button class="view-all-btn">عرض الكل ←</button>
-            </h2>
+            <div id="gradesSection" style="display: none;">
+                <h2 class="section-title">
+                    <div class="title-content">
+                        <i class="fas fa-chart-line"></i>
+                        <span>نتائجي الدراسية</span>
+                    </div>
+                </h2>
 
-            <div class="schedule-section">
-                <div class="schedule-header">
-                    <h3>الجدول الدراسي الأسبوعي</h3>
-                </div>
+                <div class="grades-section">
+                    <div class="grades-header">
+                        <h3>الدرجات والتقييمات</h3>
+                    </div>
 
-                <div class="schedule-container">
-                    <div class="week-schedule" id="weeklySchedule">
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>التقدم الأكاديمي</span>
+                            <span><strong id="progressPercentage">0%</strong></span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="gradesContainer">
                         <div class="loading">
                             <div class="spinner"></div>
                         </div>
@@ -1233,142 +1324,35 @@
                 </div>
             </div>
 
-            <h2 class="section-title">
-                <div class="title-content">
-                    <i class="fas fa-tasks"></i>
-                    <span>الواجبات القادمة</span>
-                </div>
-                <button class="view-all-btn">عرض الكل ←</button>
-            </h2>
-
-            <div id="assignmentsContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
+            <div id="studentClassSection" style="display: none;">
+                <h2 class="section-title">
+                    <i class="fas fa-school"></i>
+                    <span>معلومات الفصل</span>
+                </h2>
+                <div id="studentClassInfo" class="data-card">
+                    <!-- Dynamic content will be loaded here -->
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
 
-            <h2 class="section-title">
-                <div class="title-content">
-                    <i class="fas fa-chart-line"></i>
-                    <span>نتائجي الدراسية</span>
-                </div>
-            </h2>
-
-            <div class="grades-section">
-                <div class="grades-header">
-                    <h3>الدرجات والتقييمات</h3>
-                </div>
-
-                <div class="progress-container">
-                    <div class="progress-label">
-                        <span>التقدم الأكاديمي</span>
-                        <span><strong id="progressPercentage">0%</strong></span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressBar" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div id="gradesContainer">
+            <div id="announcementsSection" style="display: none;">
+                <h2 class="section-title">
+                    <i class="fas fa-bullhorn"></i>
+                    الإعلانات المدرسية
+                </h2>
+                <div id="announcementsContainer" class="announcements-grid">
                     <div class="loading">
                         <div class="spinner"></div>
+                        <p>جارٍ تحميل الإعلانات...</p>
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- View Assignment Modal -->
-    <div id="viewAssignmentModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3 class="modal-title">تفاصيل الواجب</h3>
-                <button class="close-btn" onclick="closeModal('viewAssignmentModal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="assignmentDetailsContent">
-                    <div class="form-group">
-                        <label for="assignmentTitle">عنوان الواجب</label>
-                        <input type="text" id="assignmentTitle" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignmentSubject">المادة</label>
-                        <input type="text" id="assignmentSubject" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignmentTeacher">المعلم</label>
-                        <input type="text" id="assignmentTeacher" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignmentDescription">الوصف</label>
-                        <textarea id="assignmentDescription" class="form-control" rows="4" readonly></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignmentDueDate">موعد التسليم</label>
-                        <input type="text" id="assignmentDueDate" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignmentMaxScore">الدرجة العظمى</label>
-                        <input type="text" id="assignmentMaxScore" class="form-control" readonly>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('viewAssignmentModal')">إغلاق</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Grade Modal -->
-    <div id="viewGradeModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3 class="modal-title">تفاصيل الدرجة</h3>
-                <button class="close-btn" onclick="closeModal('viewGradeModal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="gradeDetailsContent">
-                    <div class="form-group">
-                        <label for="gradeSubject">المادة</label>
-                        <input type="text" id="gradeSubject" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeType">نوع التقييم</label>
-                        <input type="text" id="gradeType" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeScore">الدرجة</label>
-                        <input type="text" id="gradeScore" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeMaxScore">الدرجة العظمى</label>
-                        <input type="text" id="gradeMaxScore" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradePercentage">النسبة المئوية</label>
-                        <input type="text" id="gradePercentage" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeTeacher">المعلم</label>
-                        <input type="text" id="gradeTeacher" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeDate">تاريخ التقييم</label>
-                        <input type="text" id="gradeDate" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="gradeNotes">ملاحظات</label>
-                        <textarea id="gradeNotes" class="form-control" rows="3" readonly></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('viewGradeModal')">إغلاق</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Styles -->
+    <!-- Modal Elements... -->
     <style>
         /* Modal Styles */
         .modal {
@@ -1509,6 +1493,28 @@
             background: #c0392b;
         }
 
+        .btn-primary {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -1531,10 +1537,6 @@
             }
         }
     </style>
-
-    <!-- QR Libraries -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script type="module" src="js/student.js?v=6" defer></script>
 </body>

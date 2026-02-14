@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة متابعة ولي الأمر - إتقان التعليمي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global.css">
+    <script src="js/theme.js"></script>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--main-bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .sidebar-header .logo {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 20px;
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: 0.3s;
+            font-weight: 600;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: var(--glass);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-menu a i {
+            font-size: 18px;
+            width: 25px;
+            text-align: center;
+        }
+
+        .sidebar-menu a.active i {
+            color: var(--primary);
+        }
+
+        .menu-divider {
+            padding: 15px 20px 5px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            font-weight: 800;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-right: var(--sidebar-width);
+            flex: 1;
+            padding: 40px;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            background: var(--glass);
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .student-badge {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-light);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        /* Widgets & Sections */
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--glass);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        /* Lists and Tables */
+        .data-card {
+            background: var(--glass);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 30px;
+        }
+
+        .data-card h3 {
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .schedule-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        /* AI Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--sidebar-bg);
+            padding: 40px;
+            border-radius: 30px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--glass);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .close-modal:hover {
+            background: var(--danger);
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--warning);
+            transition: 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-logout-nav {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.3s;
+        }
+
+        .btn-logout-nav:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(100%);
+            }
+
+            .main-content {
+                margin-right: 0;
+                padding: 20px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">إتقان التعليمي</div>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#" class="active" onclick="showSection('summarySection')">
+                    <i class="fas fa-home"></i>
+                    <span>نظرة عامة</span>
+                </a>
+            </li>
+            <li class="menu-divider">المتابعة الأكاديمية</li>
+            <li>
+                <a href="#" onclick="showSection('gradesSection')">
+                    <i class="fas fa-star"></i>
+                    <span>الدرجات والنتائج</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('attendanceSection')">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>سجل الغياب</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('scheduleSection')">
+                    <i class="fas fa-clock"></i>
+                    <span>جدول الحصص</span>
+                </a>
+            </li>
+            <li class="menu-divider">التواصل والإشعارات</li>
+            <li>
+                <a href="#" onclick="showSection('announcementsSection')">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>إعلانات المدرسة</span>
+                </a>
+            </li>
+            <li class="menu-divider">أخرى</li>
+            <li>
+                <a href="#" onclick="logoutUser()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>تسجيل الخروج</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="user-info">
+                <div class="user-avatar" id="studentInitial">S</div>
+                <div>
+                    <h4 id="studentDisplayName">اسم الطالب</h4>
+                    <span class="student-badge" id="studentCodeDisplay">ST-0000</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="aiReportBanner" style="display: none;">
+                    <button class="btn-main" onclick="checkAIReport()"
+                        style="padding: 10px 20px; font-size: 13px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
+                        <i class="fas fa-robot"></i> تقرير AI جديد
+                    </button>
+                </div>
+
+                <div class="theme-toggle" id="themeToggle" title="تبديل الوضع الليلي">
+                    <i class="fas fa-moon"></i>
+                </div>
+
+                <button class="btn-logout-nav" onclick="logoutUser()">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </button>
+            </div>
+        </nav>
+
+        <!-- Summary Section -->
+        <section id="summarySection" class="section active">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <p style="font-size: 14px; opacity: 0.6;">المعدل العام</p>
+                        <h2 id="overallAverage">0%</h2>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div>
+                        <p style="font-size: 14px; opacity: 0.6;">نسبة الحضور</p>
+                        <h2 id="attendanceRate">0%</h2>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div>
+                        <p style="font-size: 14px; opacity: 0.6;">واجبات قادمة</p>
+                        <h2 id="pendingAssignments">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Grades -->
+            <div class="data-card">
+                <h3><i class="fas fa-award"></i> آخر النتائج</h3>
+                <div id="recentGradesLegacy">
+                    <p style="text-align: center; opacity: 0.4;">جاري تحميل البيانات...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Grades Section -->
+        <section id="gradesSection" class="section">
+            <div class="data-card">
+                <h3><i class="fas fa-star"></i> السجل الدراسي الكامل</h3>
+                <div id="fullGradesList"></div>
+            </div>
+        </section>
+
+        <!-- Attendance Section -->
+        <section id="attendanceSection" class="section">
+            <div class="data-card">
+                <h3><i class="fas fa-calendar-alt"></i> تفاصيل الغياب والتأخر</h3>
+                <div id="fullAttendanceList"></div>
+            </div>
+        </section>
+
+        <!-- Schedule Section -->
+        <section id="scheduleSection" class="section">
+            <div class="data-card">
+                <h3><i class="fas fa-calendar-day"></i> جدول الحصص الأسبوعي</h3>
+                <div class="schedule-grid" id="parentScheduleGrid"></div>
+            </div>
+        </section>
+
+        <!-- Announcements Section -->
+        <section id="announcementsSection" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-bullhorn"></i>
+                الإعلانات المدرسية
+            </h2>
+            <div id="announcementsContainer" class="announcements-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>جارٍ تحميل الإعلانات...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- LMS Section -->
+        <section id="lmsSection" class="section">
+            <div class="data-card">
+                <h3><i class="fas fa-book-open"></i> الواجبات المنزلية</h3>
+                <div id="assignmentsList"></div>
+            </div>
+            <div class="data-card">
+                <h3><i class="fas fa-file-download"></i> المواد التعليمية</h3>
+                <div id="materialsList"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- AI Report Modal -->
+    <div class="modal" id="aiReportModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeAIModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+                <div
+                    style="width: 50px; height: 50px; background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div>
+                    <h2 style="font-size: 22px; color: white;">تقرير الأداء الذكي</h2>
+                    <p style="font-size: 13px; opacity: 0.5;">تحليل بواسطة Gemini AI</p>
+                </div>
+            </div>
+            <div id="aiReportContent"
+                style="padding: 20px; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid var(--glass-border);">
+                <!-- AI Text here -->
+            </div>
+            <div style="margin-top: 25px; text-align: center;">
+                <p style="font-size: 12px; opacity: 0.4;">هذا التقرير تم إنشاؤه آلياً بناءً على نتائج الطالب في الفترة
+                    الأخيرة.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/parent.js"></script>
+</body>
+
+</html>

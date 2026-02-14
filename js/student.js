@@ -19,6 +19,105 @@ let currentStudent = null;
 let studentData = null;
 let isLoading = false;
 
+// ===== UI NAVIGATION =====
+window.showSection = function (sectionId) {
+    // Hide all main sections
+    const sections = ['summarySection', 'assignmentsSection', 'gradesSection', 'scheduleSection', 'announcementsSection', 'studentClassSection'];
+
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+        if (el) el.classList.remove('active');
+    });
+
+    // Reset sidebar link active state
+    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+
+    // Find link by sectionId match in onclick
+    const activeLink = document.querySelector(`.sidebar-menu a[onclick*="${sectionId}"]`);
+    if (activeLink) activeLink.classList.add('active');
+
+    // Show requested section
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.style.display = 'block';
+        setTimeout(() => target.classList.add('active'), 10);
+    }
+
+    // Scroll to top of main content
+    window.scrollTo(0, 0);
+
+    // Handle specific section logic
+    if (sectionId === 'announcementsSection') loadAnnouncements();
+    if (sectionId === 'assignmentsSection') loadAssignments();
+    if (sectionId === 'scheduleSection') loadWeeklySchedule();
+    if (sectionId === 'summarySection') loadStatistics();
+    if (sectionId === 'studentClassSection') loadClassInfo();
+};
+
+// ===== LOAD CLASS INFO =====
+async function loadClassInfo() {
+    const container = document.getElementById('studentClassInfo');
+    if (!container) return;
+
+    try {
+        if (!studentData || !studentData.classId) {
+            container.innerHTML = '<p style="text-align:center; padding:20px;">لا تتوفر معلومات عن الفصل حالياً.</p>';
+            return;
+        }
+
+        const classDoc = await getDoc(doc(db, 'classes', studentData.classId));
+        if (!classDoc.exists()) {
+            container.innerHTML = '<p style="text-align:center; padding:20px;">لم يتم العثور على بيانات الفصل.</p>';
+            return;
+        }
+
+        const classData = classDoc.data();
+
+        // Find teacher for this class
+        const teachersQuery = query(
+            collection(db, 'users'),
+            where('role', '==', 'teacher'),
+            where('classes', 'array-contains', studentData.classId)
+        );
+        const teachersSnap = await getDocs(teachersQuery);
+        const teacherData = !teachersSnap.empty ? teachersSnap.docs[0].data() : null;
+
+        let html = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 10px;">
+                <div class="info-card" style="background: var(--glass); padding: 20px; border-radius: 15px; border: 1px solid var(--glass-border);">
+                    <h4 style="margin-top: 0; color: var(--accent);"><i class="fas fa-school"></i> بيانات الفصل</h4>
+                    <p><strong>اسم الفصل:</strong> ${classData.name || '-'}</p>
+                    <p><strong>المرحلة الدراسية:</strong> ${classData.grade || '-'}</p>
+                    <p><strong>عدد الطلاب:</strong> ${classData.studentCount || '-'}</p>
+                </div>
+                
+                <div class="info-card" style="background: var(--glass); padding: 20px; border-radius: 15px; border: 1px solid var(--glass-border);">
+                    <h4 style="margin-top: 0; color: var(--accent);"><i class="fas fa-chalkboard-teacher"></i> رائد الفصل</h4>
+                    <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px;">
+                        <div style="width: 50px; height: 50px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">
+                            ${teacherData ? getInitials(teacherData.fullName) : '؟'}
+                        </div>
+                        <div>
+                            <p style="margin: 0; font-weight: bold;">${teacherData ? teacherData.fullName : 'لم يتم التعيين'}</p>
+                            <p style="margin: 0; font-size: 13px; color: var(--text-muted);">${teacherData ? (teacherData.subject || 'معلم') : ''}</p>
+                        </div>
+                    </div>
+                    ${teacherData ? `
+                        <p style="margin-top: 15px; font-size: 14px;"><i class="fas fa-envelope"></i> ${teacherData.email}</p>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error('Load Class Info Error:', error);
+        container.innerHTML = '<p style="text-align:center; color:var(--danger); padding:20px;">فشل تحميل معلومات الفصل.</p>';
+    }
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', init);
 
@@ -44,6 +143,9 @@ async function init() {
             loadGrades(),
             loadWeeklySchedule()
         ]);
+
+        // Default to summary
+        window.showSection('summarySection');
 
     } catch (error) {
         FirebaseHelpers.logError('Student Init', error);
@@ -95,7 +197,7 @@ async function loadStudentData(uid) {
                 if (classDoc.exists()) {
                     const classInfo = classDoc.data();
                     document.getElementById('classBadge').textContent = classInfo.name || 'الفصل';
-                    document.getElementById('studentClass').textContent = classInfo.name || '-';
+                    document.getElementById('studentClassDisplay').textContent = classInfo.name || '-';
                     document.getElementById('studentGrade').textContent = classInfo.grade || '-';
 
                     // Load teacher info
@@ -168,12 +270,11 @@ async function loadStatistics() {
 
         const assignmentsQuery = query(
             collection(db, 'assignments'),
-            where('status', '==', 'active'),
-            where('assignedTo', 'array-contains', currentStudent.id)
+            where('classId', '==', studentData.classId)
         );
 
         const assignmentsSnap = await getDocs(assignmentsQuery);
-        const pendingCount = assignmentsSnap.size;
+        const pendingCount = assignmentsSnap.docs.filter(d => d.data().status === 'active').length;
         animateCounter('pendingAssignments', pendingCount);
 
         const gradesQuery = query(
@@ -218,6 +319,20 @@ async function loadStatistics() {
         const gpa = gradeCount > 0 ? (totalGrades / gradeCount).toFixed(1) : 0;
         document.getElementById('gpaScore').textContent = gpa;
 
+        // Calculate Trend (Compare recent 5 grades with older ones)
+        let trendHtml = '<span style="color: var(--text-muted); font-size: 11px;">بيانات غير كافية</span>';
+        if (gradeCount >= 3) {
+            const recentAvg = sortedGrades.slice(0, 3).reduce((acc, d) => acc + (d.data().score / d.data().maxScore) * 100, 0) / 3;
+            const olderAvg = sortedGrades.slice(3, 6).length > 0 ?
+                sortedGrades.slice(3, 6).reduce((acc, d) => acc + (d.data().score / d.data().maxScore) * 100, 0) / sortedGrades.slice(3, 6).length : gpa;
+
+            const diff = recentAvg - olderAvg;
+            if (diff > 2) trendHtml = '<span style="color: var(--success); font-size: 11px;"><i class="fas fa-arrow-up"></i> تحسن ملحوظ</span>';
+            else if (diff < -2) trendHtml = '<span style="color: var(--danger); font-size: 11px;"><i class="fas fa-arrow-down"></i> تراجع بسيط</span>';
+            else trendHtml = '<span style="color: var(--primary-light); font-size: 11px;"><i class="fas fa-arrows-alt-h"></i> مستوى مستقر</span>';
+        }
+        document.getElementById('performanceTrend').innerHTML = trendHtml;
+
         document.getElementById('progressPercentage').textContent = `${Math.round(gpa)}%`;
         document.getElementById('progressBar').style.width = `${gpa}%`;
 
@@ -246,13 +361,13 @@ async function loadAssignments() {
         // Query assignments by classId instead of assignedTo array
         const q = query(
             collection(db, 'assignments'),
-            where('status', '==', 'active'),
             where('classId', '==', studentData.classId)
         );
 
         const snapshot = await getDocs(q);
+        const activeDocs = snapshot.docs.filter(d => d.data().status === 'active');
 
-        if (snapshot.empty) {
+        if (activeDocs.length === 0) {
             container.innerHTML = createEmptyState(
                 'لا توجد واجبات معلقة',
                 'أحسنت! لقد أكملت جميع واجباتك',
@@ -264,7 +379,7 @@ async function loadAssignments() {
 
         let html = '<div class="assignments-grid">';
 
-        snapshot.forEach(doc => {
+        activeDocs.forEach(doc => {
             const assignment = doc.data();
 
             const today = new Date();
@@ -440,6 +555,29 @@ async function loadGrades() {
     }
 }
 
+// Helper to check if a session is currently happening
+function isCurrentSession(dayId, startTime, endTime) {
+    if (!startTime || !endTime) return false;
+
+    // Day check
+    const today = new Date();
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDay = days[today.getDay()];
+    if (dayId.toLowerCase() !== currentDay) return false;
+
+    // Time check
+    const formatTime = (t) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    };
+
+    const now = today.getHours() * 60 + today.getMinutes();
+    const start = formatTime(startTime);
+    const end = formatTime(endTime);
+
+    return now >= start && now <= end;
+}
+
 // ===== LOAD WEEKLY SCHEDULE =====
 async function loadWeeklySchedule() {
     const container = document.getElementById('weeklySchedule');
@@ -530,10 +668,15 @@ async function loadWeeklySchedule() {
                         else if (hour >= 17) sessionType = 'evening';
                     }
 
-                    html += `<div class="session-card ${sessionType}">
-                        <div class="session-time">${session.startTime || ''} - ${session.endTime || ''}</div>
-                        <div class="session-subject">${session.subject || 'غير محدد'}</div>
-                        <div class="session-teacher">${session.teacherName || 'غير محدد'}</div>
+                    const current = isCurrentSession(day.id, session.startTime, session.endTime);
+                    const highlightStyle = current ? 'border: 2px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); transform: scale(1.02);' : '';
+                    const glowEffect = current ? '<div class="pulse-glow" style="position:absolute; top:5px; left:5px; width:8px; height:8px; background:#8b5cf6; border-radius:50%; box-shadow: 0 0 10px #8b5cf6;"></div>' : '';
+
+                    html += `<div class="session-card ${sessionType}" style="position:relative; ${highlightStyle}">
+                        ${glowEffect}
+                        <div class="session-time">${session.startTime || ''} - ${session.endTime || ''} ${current ? '<span style="color:#a78bfa; font-size:10px; font-weight:bold;">(الآن)</span>' : ''}</div>
+                        <div class="session-subject" style="font-weight: 800;">${session.subject || 'غير محدد'}</div>
+                        <div class="session-teacher" style="font-size: 11px; opacity: 0.8;">${session.teacherName || 'غير محدد'}</div>
                     </div>`;
                 });
             }
@@ -547,6 +690,58 @@ async function loadWeeklySchedule() {
     } catch (error) {
         FirebaseHelpers.logError('Load Weekly Schedule', error);
         container.innerHTML = createErrorState('فشل في تحميل الجدول الأسبوعي');
+    }
+}
+
+// ===== LOAD ANNOUNCEMENTS =====
+async function loadAnnouncements() {
+    const container = document.getElementById('announcementsContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const q = query(
+            collection(db, 'announcements'),
+            where('target', 'in', ['all', 'students'])
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-bullhorn" style="opacity: 0.2; font-size: 50px;"></i>
+                    <p>لا توجد إعلانات حالياً.</p>
+                </div>`;
+            return;
+        }
+
+        // Client-side sorting
+        const docs = snapshot.docs.sort((a, b) => {
+            const timeA = a.data().timestamp?.toMillis() || 0;
+            const timeB = b.data().timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
+        let html = '<div style="display: grid; gap: 20px;">';
+        docs.forEach(doc => {
+            const ann = doc.data();
+            const time = ann.timestamp ? ann.timestamp.toDate().toLocaleString('ar-EG') : 'الآن';
+            html += `
+                <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; border-right: 4px solid var(--primary); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <h3 style="margin: 0; color: var(--text-main); font-size: 18px;">${ann.title}</h3>
+                        <span style="font-size: 12px; color: var(--text-muted);"><i class="fas fa-clock"></i> ${time}</span>
+                    </div>
+                    <p style="color: var(--text-main); opacity: 0.9; line-height: 1.6; margin: 0;">${ann.body || ann.content || ''}</p>
+                </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error('Announcements Error:', error);
+        container.innerHTML = '<p style="text-align: center; color: var(--danger); padding: 20px;">فشل تحميل الإعلانات.</p>';
     }
 }
 
@@ -745,22 +940,71 @@ window.showStudentQRCode = async function () {
         qrModal.id = 'studentQRModal';
         qrModal.style.display = 'block';
         qrModal.style.zIndex = '9999';
+
+        // Get class name and grade
+        let className = '-';
+        let gradeLevel = '-';
+        let academicYear = new Date().getFullYear();
+
+        if (studentData && studentData.classId) {
+            const classDoc = await getDoc(doc(db, 'classes', studentData.classId));
+            if (classDoc.exists()) {
+                const classInfo = classDoc.data();
+                className = classInfo.name || '-';
+                gradeLevel = classInfo.grade || '-';
+            }
+        }
+
         qrModal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px; margin: 100px auto; text-align: center;">
+            <div class="modal-content" style="max-width: 600px; margin: 50px auto;">
                 <div class="modal-header">
-                    <h3 class="modal-title">رمز الحضور</h3>
+                    <h3 class="modal-title">بطاقة الحضور</h3>
                     <button class="close-btn" onclick="closeStudentQRModal()">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 20px 0;">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <p>جارٍ إنشاء رمز QR...</p>
+                <div class="modal-body" style="padding: 30px;">
+                    <!-- Student Card -->
+                    <div id="studentCardPrint" style="background: white; border: 2px solid #27ae60; border-radius: 12px; padding: 30px; text-align: center; margin-bottom: 20px;">
+                        <!-- Header Information -->
+                        <div style="margin-bottom: 20px; border-bottom: 2px solid #27ae60; padding-bottom: 15px;">
+                            <h2 style="margin: 10px 0; color: #27ae60; font-size: 24px;">${currentStudent.fullName}</h2>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; font-size: 14px;">
+                                <div>
+                                    <div style="color: #7f8c8d; margin-bottom: 5px;">الفصل</div>
+                                    <div style="font-weight: bold; color: #2c3e50;">${className}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #7f8c8d; margin-bottom: 5px;">الصف</div>
+                                    <div style="font-weight: bold; color: #2c3e50;">${gradeLevel}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #7f8c8d; margin-bottom: 5px;">السنة الدراسية</div>
+                                    <div style="font-weight: bold; color: #2c3e50;">${academicYear}-${academicYear + 1}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #7f8c8d; margin-bottom: 5px;">الرقم الأكاديمي</div>
+                                    <div style="font-weight: bold; color: #2c3e50;">${studentData?.studentCode || 'N/A'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- QR Code -->
+                        <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 25px 0; min-height: 300px;">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>جارٍ إنشاء رمز QR...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ecf0f1; font-size: 12px; color: #95a5a6;">
+                            <p>أظهر هذه البطاقة للمعلم لتسجيل الحضور</p>
                         </div>
                     </div>
-                    <p>أظهر هذا الرمز للمعلم لتسجيل الحضور</p>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: center; padding: 20px;">
+                    <button class="btn btn-primary" onclick="printStudentCard()" style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-print"></i> طباعة البطاقة
+                    </button>
                     <button class="btn btn-secondary" onclick="closeStudentQRModal()">إغلاق</button>
                 </div>
             </div>
@@ -768,12 +1012,11 @@ window.showStudentQRCode = async function () {
 
         document.body.appendChild(qrModal);
 
-        // Generate QR code
+        // Generate QR code - Keep data minimal to avoid QR code size overflow
         const qrCodeData = {
-            type: 'student_attendance',
-            studentId: currentStudent.id,
-            studentName: currentStudent.fullName,
-            timestamp: Date.now()
+            // Shortened keys to reduce data size
+            s: currentStudent.id,  // student ID
+            t: Date.now()          // timestamp
         };
 
         const qrCodeElement = await generateStudentQRCode(qrCodeData);
@@ -789,6 +1032,149 @@ window.showStudentQRCode = async function () {
             if (modal) {
                 modal.remove();
             }
+        };
+
+        // Add print function to window
+        window.printStudentCard = function () {
+            const cardElement = document.getElementById('studentCardPrint');
+            if (!cardElement) return;
+
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>بطاقة الحضور</title>
+                    <style>
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        body {
+                            font-family: 'Cairo', sans-serif;
+                            padding: 20px;
+                            background: white;
+                        }
+                        @media print {
+                            body {
+                                margin: 0;
+                                padding: 0;
+                            }
+                        }
+                        .card-container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background: white;
+                            border: 2px solid #27ae60;
+                            border-radius: 12px;
+                            padding: 30px;
+                            text-align: center;
+                        }
+                        .card-header {
+                            margin-bottom: 20px;
+                            border-bottom: 2px solid #27ae60;
+                            padding-bottom: 15px;
+                        }
+                        .student-name {
+                            margin: 10px 0;
+                            color: #27ae60;
+                            font-size: 24px;
+                            font-weight: bold;
+                        }
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 15px;
+                            margin-top: 15px;
+                            font-size: 14px;
+                        }
+                        .info-item {
+                            padding: 10px;
+                        }
+                        .info-label {
+                            color: #7f8c8d;
+                            margin-bottom: 5px;
+                            font-size: 12px;
+                        }
+                        .info-value {
+                            font-weight: bold;
+                            color: #2c3e50;
+                            font-size: 14px;
+                        }
+                        .qr-code-section {
+                            display: flex;
+                            justify-content: center;
+                            margin: 25px 0;
+                            padding: 20px;
+                        }
+                        .qr-code-section img,
+                        .qr-code-section canvas {
+                            max-width: 280px;
+                            height: auto;
+                        }
+                        .card-footer {
+                            margin-top: 20px;
+                            padding-top: 15px;
+                            border-top: 1px solid #ecf0f1;
+                            font-size: 12px;
+                            color: #95a5a6;
+                        }
+                        @media print {
+                            body {
+                                margin: 0;
+                            }
+                            .card-container {
+                                border: 3px solid #27ae60;
+                                page-break-after: avoid;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="card-container">
+                        <div class="card-header">
+                            <div class="student-name">${currentStudent.fullName}</div>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">الفصل</div>
+                                    <div class="info-value">${className}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">الصف</div>
+                                    <div class="info-value">${gradeLevel}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">السنة الدراسية</div>
+                                    <div class="info-value">${academicYear}-${academicYear + 1}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">الرقم الأكاديمي</div>
+                                    <div class="info-value">${studentData?.studentCode || 'N/A'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="qr-code-section">
+                            ${cardElement.querySelector('#qrCodeContainer')?.innerHTML || ''}
+                        </div>
+                        <div class="card-footer">
+                            <p>أظهر هذه البطاقة للمعلم لتسجيل الحضور</p>
+                        </div>
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() {
+                                window.close();
+                            };
+                        };
+                    </script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         };
 
     } catch (error) {

@@ -122,13 +122,20 @@ function selectStudent(student, itemEl) {
     qrCodeEl.innerHTML = ''; // Clear previous
 
     try {
-        new QRCode(qrCodeEl, {
+        // Check if QRCode library is loaded
+        if (typeof window.QRCode === 'undefined') {
+            qrCodeEl.textContent = "جارٍ تحميل مكتبة QR...";
+            setTimeout(() => selectStudent(student, itemEl), 500);
+            return;
+        }
+
+        new window.QRCode(qrCodeEl, {
             text: student.id,
             width: 120,
             height: 120,
             colorDark: "#000000",
             colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
+            correctLevel: window.QRCode.CorrectLevel.H
         });
     } catch (e) {
         console.error("QR Gen Error:", e);

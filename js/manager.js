@@ -3,6 +3,7 @@ import { db, FirebaseHelpers } from './firebaseConfig.js';
 import { startAttendanceScanning, getAttendanceLogs, renderAttendanceLogs } from './attendanceManager.js';
 import { initScanner, stopScanner } from './attendance-scanner.js';
 import { initGenerator } from './generator.js';
+import './dataManagement.js';
 import {
     collection,
     doc,
@@ -15,7 +16,9 @@ import {
     orderBy,
     updateDoc,
     deleteDoc,
-    serverTimestamp
+    limit,
+    serverTimestamp,
+    arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // ===== STATE =====
@@ -23,9 +26,38 @@ let currentUser = null;
 let isLoading = false;
 
 // ===== UI NAVIGATION =====
+// ===== UI NAVIGATION =====
+window.toggleSidebar = function () {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('active');
+};
+
+window.closeSidebar = function () {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+};
+
 window.showSection = function (sectionId) {
     // Hide all main sections
-    const sections = ['statsSection', 'teachersSection', 'classesSection', 'scannerSection', 'generatorSection'];
+    const sections = [
+        'statsSection',
+        'teachersManagementSection',
+        'studentsManagementSection',
+        'classesManagementSection',
+        'teachersAttendanceSection',
+        'studentsAttendanceSection',
+        'scannerSection',
+        'generatorSection',
+        'dataManagementSection',
+        'announcementsSection',
+        'schedulesSection',
+        'analyticsSection',
+        'logsSection'
+    ];
 
     sections.forEach(id => {
         const el = document.getElementById(id);
@@ -34,10 +66,32 @@ window.showSection = function (sectionId) {
 
     // Show requested section
     const target = document.getElementById(sectionId);
-    if (target) target.style.display = 'block';
+    if (target) {
+        target.style.display = 'block';
+
+        // Save current section to session storage (optional, for page reload)
+        sessionStorage.setItem('currentSection', sectionId);
+    }
 
     // Handle specific section logic
+    if (sectionId === 'teachersAttendanceSection') {
+        const teacherSelect = document.getElementById('teachersAttendanceTeacherSelect');
+        if (teacherSelect) populateTeacherSelect(teacherSelect);
+    } else if (sectionId === 'studentsAttendanceSection') {
+        const classSelect = document.getElementById('studentsAttendanceClassSelect');
+        if (classSelect) populateClassSelect(classSelect);
+    }
+
+    const container = document.querySelector('.container');
+    if (sectionId === 'dataManagementSection') {
+        if (container) container.style.display = 'none';
+        // loadClassesWithStudents(); // Removed as per new design
+    } else {
+        if (container) container.style.display = 'block';
+    }
+
     if (sectionId === 'scannerSection') {
+        // Initialize scanner (will handle library loading internally)
         initScanner('reader');
     } else {
         stopScanner();
@@ -46,21 +100,324 @@ window.showSection = function (sectionId) {
     if (sectionId === 'generatorSection') {
         initGenerator();
     }
+
+    if (sectionId === 'studentsManagementSection') {
+        loadClassesWithStudents();
+    }
+
+    if (sectionId === 'announcementsSection') {
+        loadAnnouncements();
+    }
+
+    if (sectionId === 'analyticsSection') {
+        loadAnalytics();
+    }
+
+    if (sectionId === 'logsSection') {
+        loadActivityLogs();
+    }
+
+    if (sectionId === 'schedulesSection') {
+        loadSchedules();
+    }
 };
 
-// ===== INITIALIZATION =====
+// ===== ACTIVITY LOGGING HELPER =====
+window.logActivity = async function (action, details) {
+    try {
+        const userStr = sessionStorage.getItem('currentUser');
+        const user = userStr ? JSON.parse(userStr) : { email: 'System', role: 'admin' };
+
+        await addDoc(collection(db, 'activity_logs'), {
+            action,
+            details,
+            adminEmail: user.email,
+            adminRole: user.role,
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Error logging activity:', error);
+    }
+};
+
+// ===== ACTIVITY LOGS SECTION =====
+window.loadActivityLogs = async function () {
+    const tableContent = document.getElementById('activityLogsTableContent');
+    tableContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            tableContent.innerHTML = '<p style="text-align:center; padding:20px;">لا توجد نشاطات مسجلة بعد.</p>';
+            return;
+        }
+
+        let html = `
+            <table class="attendance-log-table">
+                <thead>
+                    <tr>
+                        <th>الوقت</th>
+                        <th>المسؤول</th>
+                        <th>العملية</th>
+                        <th>التفاصيل</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        snapshot.forEach(doc => {
+            const log = doc.data();
+            const time = log.timestamp ? log.timestamp.toDate().toLocaleString('ar-EG') : '-';
+            html += `
+                <tr>
+                    <td>${time}</td>
+                    <td><span class="badge" style="background:#f1c40f; color:#000;">${log.adminEmail}</span></td>
+                    <td><strong>${log.action}</strong></td>
+                    <td style="font-size: 13px;">${log.details}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        tableContent.innerHTML = html;
+
+    } catch (error) {
+        console.error('Load logs error:', error);
+        tableContent.innerHTML = '<p style="color:red; text-align:center;">خطأ في تحميل السجل</p>';
+    }
+};
+
+// ===== ANNOUNCEMENTS SECTION =====
+window.loadAnnouncements = async function () {
+    const container = document.getElementById('announcementsContainer');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const q = query(collection(db, 'announcements'), orderBy('timestamp', 'desc'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align:center;">لا توجد إعلانات حالياً.</p>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const ann = doc.data();
+            const time = ann.timestamp ? ann.timestamp.toDate().toLocaleDateString('ar-EG') : '-';
+            const targetLabel = ann.target === 'all' ? 'للجميع' : (ann.target === 'teachers' ? 'للمعلمين' : 'للطلاب');
+
+            html += `
+                <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.05); border-right:5px solid #e67e22;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <h4 style="margin:0; color:#2c3e50;">${ann.title}</h4>
+                        <span style="font-size:12px; color:#95a5a6;">${time}</span>
+                    </div>
+                    <p style="margin-bottom:15px; color:#7f8c8d; line-height:1.6;">${ann.body}</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; background:#fef5e7; color:#e67e22; padding:3px 10px; border-radius:15px;">${targetLabel}</span>
+                        <button class="icon-btn delete" onclick="deleteAnnouncement('${doc.id}')" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error('Load announcements error:', error);
+        container.innerHTML = '<p>خطأ في تحميل الإعلانات</p>';
+    }
+};
+
+window.showAnnouncementModal = function () {
+    document.getElementById('announcementTitle').value = '';
+    document.getElementById('announcementBody').value = '';
+    document.getElementById('announcementModal').style.display = 'block';
+};
+
+window.publishAnnouncement = async function () {
+    const title = document.getElementById('announcementTitle').value;
+    const body = document.getElementById('announcementBody').value;
+    const target = document.getElementById('announcementTarget').value;
+
+    if (!title || !body) {
+        FirebaseHelpers.showToast('يرجى كتابة العنوان والمحتوى', 'error');
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'announcements'), {
+            title,
+            body,
+            target,
+            timestamp: serverTimestamp()
+        });
+
+        await logActivity('نشر إعلان', `تم نشر إعلان جديد بعنوان: ${title}`);
+        FirebaseHelpers.showToast('تم نشر الإعلان بنجاح', 'success');
+        closeModal('announcementModal');
+        loadAnnouncements();
+    } catch (error) {
+        FirebaseHelpers.logError('Publish Announcement', error);
+        FirebaseHelpers.showToast('فشل النشر', 'error');
+    }
+};
+
+window.deleteAnnouncement = async function (id) {
+    if (!confirm('هل تريد حذف هذا الإعلان؟')) return;
+    try {
+        await deleteDoc(doc(db, 'announcements', id));
+        FirebaseHelpers.showToast('تم الحذف', 'success');
+        loadAnnouncements();
+    } catch (error) {
+        FirebaseHelpers.showToast('فشل الحذف', 'error');
+    }
+};
+
+// ===== ANALYTICS SECTION =====
+let studentChart, teacherChart, classChart;
+
+window.loadAnalytics = async function () {
+    try {
+        const stats = {
+            studentAttendance: [65, 59, 80, 81, 56, 55, 40], // Example data
+            teacherAttendance: [100, 95, 100, 90, 85, 100, 95],
+            labels: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+        };
+
+        // Real data fetching would go here (summary from collections)
+
+        const ctxS = document.getElementById('studentAttendanceChart');
+        if (ctxS) {
+            if (studentChart) studentChart.destroy();
+            studentChart = new Chart(ctxS, {
+                type: 'line',
+                data: {
+                    labels: stats.labels,
+                    datasets: [{
+                        label: 'نسبة الحضور %',
+                        data: stats.studentAttendance,
+                        borderColor: '#2ecc71',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)'
+                    }]
+                }
+            });
+        }
+
+        const ctxT = document.getElementById('teacherAttendanceChart');
+        if (ctxT) {
+            if (teacherChart) teacherChart.destroy();
+            teacherChart = new Chart(ctxT, {
+                type: 'line',
+                data: {
+                    labels: stats.labels,
+                    datasets: [{
+                        label: 'حضور المعلم %',
+                        data: stats.teacherAttendance,
+                        borderColor: '#3498db',
+                        tension: 0.4
+                    }]
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Analytics Error:', error);
+    }
+};
+
+// ===== SCHEDULES SECTION =====
+window.loadSchedules = async function () {
+    const container = document.getElementById('schedulesContainer');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const q = query(collection(db, 'schedules'), orderBy('classId'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align:center;">لا توجد جداول مسجلة.</p>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const sched = doc.data();
+            html += `
+                <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h4 style="margin:0;">جدول : ${sched.className}</h4>
+                        <small style="color:#7f8c8d;">يوم: ${sched.day}</small>
+                    </div>
+                    <div>
+                        <button class="icon-btn delete" onclick="deleteSchedule('${doc.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch (error) {
+        container.innerHTML = '<p>خطأ في تحميل الجداول</p>';
+    }
+};
+
+window.showAddScheduleModal = async function () {
+    const classSelect = document.getElementById('schedClassSelect');
+    const classesSnap = await getDocs(collection(db, 'classes'));
+    classSelect.innerHTML = '';
+    classesSnap.forEach(doc => {
+        const cls = doc.data();
+        const opt = document.createElement('option');
+        opt.value = doc.id;
+        opt.dataset.name = cls.name;
+        opt.textContent = cls.name;
+        classSelect.appendChild(opt);
+    });
+    document.getElementById('scheduleModal').style.display = 'block';
+};
+
+window.saveSchedule = async function () {
+    const classId = document.getElementById('schedClassSelect').value;
+    const className = document.getElementById('schedClassSelect').options[document.getElementById('schedClassSelect').selectedIndex].dataset.name;
+    const day = document.getElementById('schedDay').value;
+
+    try {
+        await addDoc(collection(db, 'schedules'), {
+            classId,
+            className,
+            day,
+            timestamp: serverTimestamp()
+        });
+        FirebaseHelpers.showToast('تم حفظ الجدول', 'success');
+        closeModal('scheduleModal');
+        loadSchedules();
+    } catch (error) {
+        FirebaseHelpers.showToast('فشل الحفظ', 'error');
+    }
+};
+
+window.deleteSchedule = async function (id) {
+    if (!confirm('حذف الجدول؟')) return;
+    await deleteDoc(doc(db, 'schedules', id));
+    loadSchedules();
+};
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     if (isLoading) return;
     isLoading = true;
 
-    // Show default sections
-    window.showSection('statsSection'); // Use helper to ensure scanner is definitely off
-    document.getElementById('teachersSection').style.display = 'block'; // Dashboard usually shows multiple
-    document.getElementById('classesSection').style.display = 'block';
-
     try {
+        // Show default section (Stats)
+        window.showSection('statsSection');
+
         // Get user from session
         const currentUserStr = sessionStorage.getItem('currentUser');
         if (!currentUserStr) {
@@ -168,13 +525,34 @@ async function loadUserData(uid) {
 // ===== LOAD STATISTICS =====
 async function loadStats() {
     try {
-        const [teachers, classes] = await Promise.all([
-            getDocs(query(collection(db, 'users'), where('role', '==', 'teacher'))),
-            getDocs(collection(db, 'classes'))
+        // Teachers
+        const teachersQuery = query(collection(db, 'users'), where('role', '==', 'teacher'));
+
+        // Students
+        const studentsQuery = query(collection(db, 'users'), where('role', '==', 'student'));
+
+        // Classes
+        const classesRef = collection(db, 'classes');
+
+        // Attendance (Today)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const attendanceQuery = query(
+            collection(db, 'attendance'),
+            where('timestamp', '>=', today)
+        );
+
+        const [teachersSnap, studentsSnap, classesSnap, attendanceSnap] = await Promise.all([
+            getDocs(teachersQuery),
+            getDocs(studentsQuery),
+            getDocs(classesRef),
+            getDocs(attendanceQuery)
         ]);
 
-        animateCounter('teachersCount', teachers.size);
-        animateCounter('classesCount', classes.size);
+        animateCounter('teachersCount', teachersSnap.size);
+        animateCounter('studentsCount', studentsSnap.size);
+        animateCounter('classesCount', classesSnap.size);
+        animateCounter('attendanceCount', attendanceSnap.size);
 
     } catch (error) {
         FirebaseHelpers.logError('Load Stats', error);
@@ -385,16 +763,39 @@ function scrollToSection(id) {
 async function toggleStatus(userId, currentStatus) {
     try {
         const newStatus = !currentStatus;
-        await updateDoc(doc(db, 'users', userId), {
-            isActive: newStatus
-        });
+
+        // Update users collection
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+
+        if (!userDoc.exists()) {
+            FirebaseHelpers.showToast('المستخدم غير موجود', 'error');
+            return;
+        }
+
+        const userData = userDoc.data();
+        await updateDoc(userRef, { isActive: newStatus });
+
+        // If it's a student, also update students collection
+        if (userData.role === 'student' || userData.role === 'Student') {
+            const studentRef = doc(db, 'students', userId);
+            const studentDoc = await getDoc(studentRef);
+            if (studentDoc.exists()) {
+                await updateDoc(studentRef, { status: newStatus ? 'active' : 'inactive' });
+            }
+        }
+
+        await logActivity('تغيير حالة حساب', `تم ${newStatus ? 'تفعيل' : 'تعطيل'} حساب: ${userData.fullName} (${userData.email})`);
 
         FirebaseHelpers.showToast(
             newStatus ? 'تم تفعيل المستخدم بنجاح' : 'تم تعطيل المستخدم بنجاح',
             'success'
         );
 
-        await loadTeachers();
+        if (userData.role === 'teacher') await loadTeachers();
+        if (userData.role === 'student') {
+            if (typeof loadClassesWithStudents === 'function') loadClassesWithStudents();
+        }
         await loadStats();
     } catch (error) {
         FirebaseHelpers.logError('Toggle Status', error);
@@ -410,13 +811,21 @@ async function confirmDelete(type, id, name) {
     try {
         if (type === 'teacher') {
             await deleteDoc(doc(db, 'users', id));
+            await logActivity('حذف معلم', `تم حذف المعلم: ${name} (ID: ${id})`);
             await loadTeachers();
         } else if (type === 'class') {
             await deleteDoc(doc(db, 'classes', id));
+            await logActivity('حذف فصل', `تم حذف الفصل: ${name} (ID: ${id})`);
             await loadClasses();
+        } else if (type === 'student') {
+            // Delete from both collections
+            await deleteDoc(doc(db, 'users', id));
+            await deleteDoc(doc(db, 'students', id));
+            await logActivity('حذف طالب', `تم حذف الطالب: ${name} (ID: ${id})`);
+            if (typeof loadClassesWithStudents === 'function') loadClassesWithStudents();
         }
 
-        FirebaseHelpers.showToast('تم الحلذف بنجاح', 'success');
+        FirebaseHelpers.showToast('تم الحذف بنجاح', 'success');
         await loadStats();
     } catch (error) {
         FirebaseHelpers.logError('Delete', error);
@@ -446,7 +855,7 @@ window.editClass_old = async (id) => {
     editClass(id);
 };
 
-window.viewStudentDetails = async (id) => {
+window.editStudent = async function (id) {
     try {
         const studentDoc = await getDoc(doc(db, 'students', id));
         if (!studentDoc.exists()) {
@@ -455,27 +864,116 @@ window.viewStudentDetails = async (id) => {
         }
 
         const student = studentDoc.data();
-        let classInfo = 'غير محدد';
+        document.getElementById('editStudentId').value = id;
+        document.getElementById('editStudentFullName').value = student.fullName || '';
+        document.getElementById('editStudentEmail').value = student.email || '';
+        document.getElementById('editStudentCode').value = student.studentCode || '';
 
-        if (student.classId) {
-            const classDoc = await getDoc(doc(db, 'classes', student.classId));
-            if (classDoc.exists()) {
-                classInfo = classDoc.data().name;
-            }
+        // Populate class select
+        const classSelect = document.getElementById('editStudentClassSelect');
+        const classesSnap = await getDocs(collection(db, 'classes'));
+        classSelect.innerHTML = '<option value="">بدون فصل</option>';
+        classesSnap.forEach(cdoc => {
+            const cls = cdoc.data();
+            const opt = document.createElement('option');
+            opt.value = cdoc.id;
+            opt.textContent = cls.name;
+            if (cdoc.id === student.classId) opt.selected = true;
+            classSelect.appendChild(opt);
+        });
+
+        document.getElementById('editStudentModal').style.display = 'block';
+    } catch (error) {
+        FirebaseHelpers.logError('Edit Student', error);
+        FirebaseHelpers.showToast('فشل تحميل بيانات الطالب', 'error');
+    }
+};
+
+window.updateStudentFromModal = async function () {
+    const id = document.getElementById('editStudentId').value;
+    const fullName = document.getElementById('editStudentFullName').value;
+    const email = document.getElementById('editStudentEmail').value;
+    const studentCode = document.getElementById('editStudentCode').value;
+    const classId = document.getElementById('editStudentClassSelect').value;
+
+    if (!fullName || !email) {
+        FirebaseHelpers.showToast('الاسم والبريد إلزامي', 'error');
+        return;
+    }
+
+    try {
+        // Update students collection
+        await updateDoc(doc(db, 'students', id), {
+            fullName,
+            email,
+            studentCode,
+            classId
+        });
+
+        // Update users collection
+        await updateDoc(doc(db, 'users', id), {
+            fullName,
+            email
+        });
+
+        await logActivity('تعديل بيانات طالب', `تم تحديث بيانات الطالب: ${fullName}`);
+        FirebaseHelpers.showToast('تم تحديث بيانات الطالب بنجاح', 'success');
+        closeModal('editStudentModal');
+        if (typeof loadClassesWithStudents === 'function') loadClassesWithStudents();
+    } catch (error) {
+        FirebaseHelpers.logError('Update Student', error);
+        FirebaseHelpers.showToast('فشل التحديث', 'error');
+    }
+};
+
+window.viewTeacherDetails = async function (id) {
+    const container = document.getElementById('teacherDetailsContent');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('teacherDetailsModal').style.display = 'block';
+
+    try {
+        const teacherDoc = await getDoc(doc(db, 'users', id));
+        if (!teacherDoc.exists()) {
+            container.innerHTML = '<p>المعلم غير موجود</p>';
+            return;
         }
 
-        const info = `
-الاسم: ${student.fullName}
-البريد: ${student.email}
-الرقم الطلابي: ${student.studentCode}
-الفصل: ${classInfo}
-رقم الجلوس: ${student.seatNumber}
+        const teacher = teacherDoc.data();
+        const classesIds = teacher.classes || [];
+
+        let html = `
+            <div class="teacher-info-header">
+                <h3>${teacher.fullName}</h3>
+                <p>${teacher.email} | ${teacher.subject || 'بدون تخصص'}</p>
+            </div>
+            <div class="teacher-assignments">
+                <h4 style="margin: 20px 0 10px;">الفصول المسندة (${classesIds.length})</h4>
         `;
 
-        alert(info);
+        if (classesIds.length === 0) {
+            html += '<p>لا توجد فصول مسندة لهذا المعلم حالياً.</p>';
+        } else {
+            html += '<div style="display: grid; gap: 10px;">';
+            for (const classId of classesIds) {
+                const classDoc = await getDoc(doc(db, 'classes', classId));
+                if (classDoc.exists()) {
+                    const classData = classDoc.data();
+                    html += `
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; border-right: 4px solid #3498db;">
+                            <strong>${classData.name}</strong> (${classData.grade})
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
     } catch (error) {
-        FirebaseHelpers.logError('View Student', error);
-        FirebaseHelpers.showToast('فشل عرض التفاصيل', 'error');
+        FirebaseHelpers.logError('View Teacher Details', error);
+        container.innerHTML = '<p>خطأ في تحميل البيانات</p>';
     }
 };
 
@@ -555,6 +1053,7 @@ window.assignTeacherToClass = async (teacherId) => {
 // ===== TEACHER ATTENDANCE FUNCTIONS =====
 
 // Show teacher attendance modal
+// Show teacher attendance modal
 window.showTeacherAttendance = async () => {
     try {
         // Get all teachers
@@ -614,6 +1113,121 @@ window.showTeacherAttendance = async () => {
     } catch (error) {
         FirebaseHelpers.logError('Teacher Attendance', error);
         FirebaseHelpers.showToast('فشل تسجيل الحضور', 'error');
+    }
+};
+
+window.showAssignTeacherModal = async () => {
+    try {
+        const teacherSelect = document.getElementById('assignTeacherSelect');
+        const teachersQuery = query(
+            collection(db, 'users'),
+            where('role', '==', 'teacher')
+        );
+
+        const teachersSnap = await getDocs(teachersQuery);
+
+        // --- NEW MODAL LOGIC START ---
+        const classSelect = document.getElementById('assignClassSelect');
+
+
+        classSelect.innerHTML = '<option value="">جارٍ التحميل...</option>';
+        document.getElementById('assignTeacherModal').style.display = 'block';
+
+        teacherSelect.innerHTML = '<option value="">اختر المعلم</option>';
+        if (teachersSnap.empty) {
+            teacherSelect.innerHTML = '<option value="">لا يوجد معلمين</option>';
+        } else {
+            teachersSnap.forEach(doc => {
+                const teacher = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id; // teacher UID
+                option.textContent = teacher.fullName;
+                teacherSelect.appendChild(option);
+            });
+        }
+
+        // Load Classes
+        const classesSnap = await getDocs(collection(db, 'classes'));
+
+        classSelect.innerHTML = '<option value="">اختر الفصل</option>';
+        if (classesSnap.empty) {
+            classSelect.innerHTML = '<option value="">لا يوجد فصول</option>';
+        } else {
+            classesSnap.forEach(doc => {
+                const classData = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id; // Class Doc ID
+                option.textContent = classData.name;
+                classSelect.appendChild(option);
+            });
+        }
+        // --- NEW MODAL LOGIC END ---
+
+        /*
+        
+        if (teachersSnap.empty) {
+        FirebaseHelpers.showToast('لا يوجد مدرسين', 'error');
+        return;
+        }
+        
+        let teacherOptions = 'اختر المعلم لإسناد فصل له:\n\n';
+        const teachersList = [];
+        
+        teachersSnap.forEach((doc, index) => {
+        const teacher = doc.data();
+        teachersList.push({ id: doc.id, ...teacher });
+        teacherOptions += `${index + 1}. ${teacher.fullName}\n`;
+        });
+        
+        const choice = prompt(teacherOptions + '\nأدخل رقم المعلم:');
+        if (!choice) return;
+        
+        const index = parseInt(choice) - 1;
+        if (isNaN(index) || index < 0 || index >= teachersList.length) {
+        FirebaseHelpers.showToast('رقم غير صحيح', 'error');
+        return;
+        }
+        
+        const selectedTeacher = teachersList[index];
+        
+        // Now call the existing assign function
+        assignTeacherToClass(selectedTeacher.id);
+        
+        */
+    } catch (error) {
+        console.error('Wrapper Error:', error);
+        FirebaseHelpers.showToast('حدث خطأ', 'error');
+    }
+};
+
+// Handle Assignment from Modal
+window.assignTeacherToClassFromModal = async () => {
+    try {
+        const teacherId = document.getElementById('assignTeacherSelect').value;
+        const classId = document.getElementById('assignClassSelect').value;
+
+        if (!teacherId || !classId) {
+            FirebaseHelpers.showToast('الرجاء اختيار المعلم والفصل', 'warning');
+            return;
+        }
+
+        // Add class ID to teacher's classes array
+        const teacherRef = doc(db, 'users', teacherId);
+
+        // Use arrayUnion to add without duplicates
+        await updateDoc(teacherRef, {
+            classes: arrayUnion(classId)
+        });
+
+        FirebaseHelpers.showToast('تم إسناد الفصل للمعلم بنجاح', 'success');
+        closeModal('assignTeacherModal');
+
+        // Refresh tables
+        if (typeof loadTeachers === 'function') loadTeachers();
+
+    } catch (error) {
+        console.error('Error assigning class:', error);
+        FirebaseHelpers.showToast('فشل إسناد الفصل', 'error');
     }
 };
 
@@ -940,28 +1554,28 @@ window.showStudentAttendanceLogs = async function () {
         logsModal.style.display = 'block';
         logsModal.style.zIndex = '9999';
         logsModal.innerHTML = `
-            <div class="modal-content" style="max-width: 1000px; margin: 20px auto;">
-                <div class="modal-header">
-                    <h3 class="modal-title">سجلات الحضور</h3>
-                    <button class="close-btn" onclick="closeAttendanceLogsModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="logsDate">اختر التاريخ</label>
-                        <input type="date" id="logsDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div id="attendanceLogsContent">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <p>جارٍ تحميل سجلات الحضور...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeAttendanceLogsModal()">إغلاق</button>
-                </div>
-            </div>
-        `;
+<div class="modal-content" style="max-width: 1000px; margin: 20px auto;">
+<div class="modal-header">
+    <h3 class="modal-title">سجلات الحضور</h3>
+    <button class="close-btn" onclick="closeAttendanceLogsModal()">&times;</button>
+</div>
+<div class="modal-body">
+    <div class="form-group">
+        <label for="logsDate">اختر التاريخ</label>
+        <input type="date" id="logsDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+    </div>
+    <div id="attendanceLogsContent">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>جارٍ تحميل سجلات الحضور...</p>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeAttendanceLogsModal()">إغلاق</button>
+</div>
+</div>
+`;
 
         document.body.appendChild(logsModal);
 
@@ -1014,12 +1628,12 @@ async function loadAttendanceLogsForDate() {
     } catch (error) {
         FirebaseHelpers.logError('Load Attendance Logs', error);
         document.getElementById('attendanceLogsContent').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
-                <h3>حدث خطأ</h3>
-                <p>فشل تحميل سجلات الحضور</p>
-            </div>
-        `;
+<div class="empty-state">
+<i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+<h3>حدث خطأ</h3>
+<p>فشل تحميل سجلات الحضور</p>
+</div>
+`;
     }
 }
 
@@ -1155,11 +1769,11 @@ window.viewTeacherAttendance = async function () {
 
         // Clear previous content
         document.getElementById('attendanceLogContent').innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>جارٍ تحميل سجل الحضور...</p>
-            </div>
-        `;
+<div class="loading">
+<div class="spinner"></div>
+<p>جارٍ تحميل سجل الحضور...</p>
+</div>
+`;
 
     } catch (error) {
         FirebaseHelpers.logError('Load Teachers for Log', error);
@@ -1173,12 +1787,12 @@ window.loadAttendanceLog = async function () {
 
     if (!teacherId) {
         document.getElementById('attendanceLogContent').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-user-clock"></i>
-                <h3>اختر معلم</h3>
-                <p>الرجاء اختيار معلم لعرض سجل الحضور</p>
-            </div>
-        `;
+<div class="empty-state">
+<i class="fas fa-user-clock"></i>
+<h3>اختر معلم</h3>
+<p>الرجاء اختيار معلم لعرض سجل الحضور</p>
+</div>
+`;
         return;
     }
 
@@ -1197,12 +1811,12 @@ window.loadAttendanceLog = async function () {
 
         if (attendanceSnap.empty) {
             document.getElementById('attendanceLogContent').innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-calendar-times"></i>
-                    <h3>لا توجد سجلات</h3>
-                    <p>لا توجد سجلات حضور لهذا المعلم</p>
-                </div>
-            `;
+<div class="empty-state">
+    <i class="fas fa-calendar-times"></i>
+    <h3>لا توجد سجلات</h3>
+    <p>لا توجد سجلات حضور لهذا المعلم</p>
+</div>
+`;
             return;
         }
 
@@ -1229,22 +1843,22 @@ window.loadAttendanceLog = async function () {
         });
 
         let html = `
-            <div class="attendance-log-header">
-                <h4>سجل حضور: ${teacher.fullName}</h4>
-                <p>إجمالي السجلات: ${sortedDocs.length}</p>
-            </div>
-            <div class="attendance-log-table-container">
-                <table class="attendance-log-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الحالة</th>
-                            <th>سُجل بواسطة</th>
-                            <th>الوقت</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+<div class="attendance-log-header">
+<h4>سجل حضور: ${teacher.fullName}</h4>
+<p>إجمالي السجلات: ${sortedDocs.length}</p>
+</div>
+<div class="attendance-log-table-container">
+<table class="attendance-log-table">
+    <thead>
+        <tr>
+            <th>التاريخ</th>
+            <th>الحالة</th>
+            <th>سُجل بواسطة</th>
+            <th>الوقت</th>
+        </tr>
+    </thead>
+    <tbody>
+`;
 
         sortedDocs.forEach(doc => {
             const record = doc.data();
@@ -1263,32 +1877,32 @@ window.loadAttendanceLog = async function () {
                 record.status === 'absent' ? 'غائب' : 'متأخر';
 
             html += `
-                <tr>
-                    <td>${record.date}</td>
-                    <td><span class="status-badge status-${record.status}">${statusArabic}</span></td>
-                    <td>${record.recordedByName || 'نظام'}</td>
-                    <td>${formattedTime}</td>
-                </tr>
-            `;
+<tr>
+    <td>${record.date}</td>
+    <td><span class="status-badge status-${record.status}">${statusArabic}</span></td>
+    <td>${record.recordedByName || 'نظام'}</td>
+    <td>${formattedTime}</td>
+</tr>
+`;
         });
 
         html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
+    </tbody>
+</table>
+</div>
+`;
 
         document.getElementById('attendanceLogContent').innerHTML = html;
 
     } catch (error) {
         FirebaseHelpers.logError('Load Attendance Log', error);
         document.getElementById('attendanceLogContent').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
-                <h3>حدث خطأ</h3>
-                <p>فشل تحميل سجل الحضور</p>
-            </div>
-        `;
+<div class="empty-state">
+<i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+<h3>حدث خطأ</h3>
+<p>فشل تحميل سجل الحضور</p>
+</div>
+`;
     }
 };
 
@@ -1398,21 +2012,21 @@ window.viewClassDetails = async function (classId) {
     try {
         // Show loading state
         document.getElementById('classDetailsContent').innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>جارٍ تحميل تفاصيل الفصل...</p>
-            </div>
-        `;
+<div class="loading">
+<div class="spinner"></div>
+<p>جارٍ تحميل تفاصيل الفصل...</p>
+</div>
+`;
 
         const classDoc = await getDoc(doc(db, 'classes', classId));
         if (!classDoc.exists()) {
             document.getElementById('classDetailsContent').innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
-                    <h3>خطأ</h3>
-                    <p>لم يتم العثور على الفصل</p>
-                </div>
-            `;
+<div class="empty-state">
+    <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+    <h3>خطأ</h3>
+    <p>لم يتم العثور على الفصل</p>
+</div>
+`;
             return;
         }
 
@@ -1437,44 +2051,44 @@ window.viewClassDetails = async function (classId) {
 
         // Build content
         let html = `
-            <div class="class-details-container">
-                <div class="class-summary">
-                    <h4>معلومات الفصل</h4>
-                    <div class="detail-row">
-                        <strong>الاسم:</strong>
-                        <span>${classData.name || 'غير محدد'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <strong>المرحلة:</strong>
-                        <span>${classData.grade || 'غير محدد'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <strong>السعة:</strong>
-                        <span>${classData.capacity || 0} طالب</span>
-                    </div>
-                    <div class="detail-row">
-                        <strong>عدد الطلاب:</strong>
-                        <span>${studentsSnap.size} طالب</span>
-                    </div>
-                    <div class="detail-row">
-                        <strong>الأماكن المتاحة:</strong>
-                        <span>${(classData.capacity || 0) - studentsSnap.size} مكان</span>
-                    </div>
-                </div>
-        `;
+<div class="class-details-container">
+<div class="class-summary">
+    <h4>معلومات الفصل</h4>
+    <div class="detail-row">
+        <strong>الاسم:</strong>
+        <span>${classData.name || 'غير محدد'}</span>
+    </div>
+    <div class="detail-row">
+        <strong>المرحلة:</strong>
+        <span>${classData.grade || 'غير محدد'}</span>
+    </div>
+    <div class="detail-row">
+        <strong>السعة:</strong>
+        <span>${classData.capacity || 0} طالب</span>
+    </div>
+    <div class="detail-row">
+        <strong>عدد الطلاب:</strong>
+        <span>${studentsSnap.size} طالب</span>
+    </div>
+    <div class="detail-row">
+        <strong>الأماكن المتاحة:</strong>
+        <span>${(classData.capacity || 0) - studentsSnap.size} مكان</span>
+    </div>
+</div>
+`;
 
         // Add teachers section
         html += `
-                <div class="class-teachers">
-                    <h4>المعلمون المعينون</h4>
-        `;
+<div class="class-teachers">
+    <h4>المعلمون المعينون</h4>
+`;
 
         if (teachersSnap.empty) {
             html += `
-                    <div class="no-teachers">
-                        <p>لا يوجد معلمون معينون لهذا الفصل</p>
-                    </div>
-            `;
+    <div class="no-teachers">
+        <p>لا يوجد معلمون معينون لهذا الفصل</p>
+    </div>
+`;
         } else {
             html += '<ul class="teachers-list">';
             teachersSnap.forEach(doc => {
@@ -1488,16 +2102,16 @@ window.viewClassDetails = async function (classId) {
 
         // Add students section
         html += `
-                <div class="class-students">
-                    <h4>الطلاب (${studentsSnap.size})</h4>
-        `;
+<div class="class-students">
+    <h4>الطلاب (${studentsSnap.size})</h4>
+`;
 
         if (studentsSnap.empty) {
             html += `
-                    <div class="no-students">
-                        <p>لا يوجد طلاب في هذا الفصل</p>
-                    </div>
-            `;
+    <div class="no-students">
+        <p>لا يوجد طلاب في هذا الفصل</p>
+    </div>
+`;
         } else {
             html += '<ul class="students-list">';
             studentsSnap.forEach(doc => {
@@ -1519,12 +2133,12 @@ window.viewClassDetails = async function (classId) {
     } catch (error) {
         FirebaseHelpers.logError('View Class Details', error);
         document.getElementById('classDetailsContent').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
-                <h3>حدث خطأ</h3>
-                <p>فشل تحميل تفاصيل الفصل</p>
-            </div>
-        `;
+<div class="empty-state">
+<i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+<h3>حدث خطأ</h3>
+<p>فشل تحميل تفاصيل الفصل</p>
+</div>
+`;
     }
 };
 
@@ -1572,3 +2186,520 @@ window.closeSidebar = function () {
     // Restore body scroll
     document.body.style.overflow = '';
 };
+
+// Initialize Dashboard
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const userStr = sessionStorage.getItem('currentUser');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            console.log('Initializing Manager Dashboard for:', user.email);
+
+            // Load initial data
+            await loadUserData(user.uid);
+            loadStats();
+
+            // Start clock
+            if (typeof updateDateTime === 'function') {
+                updateDateTime();
+                setInterval(updateDateTime, 1000);
+            }
+
+            // Verify access
+            /* checkAccess is handled by dashboardGuard.js which runs on load 
+               but we can double check or just rely on it */
+
+        } else {
+            // Should be handled by dashboardGuard, but fallback:
+            // window.location.href = 'index.html';
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+    }
+});
+
+// ===== ATTENDANCE DASHBOARD LOGIC =====
+
+// 1. Load Students Attendance View (Updated for Filtering)
+window.loadStudentsAttendanceView = async function () {
+    console.log('Loading Students Attendance View...');
+
+    // Set default date to today if empty
+    const dateInput = document.getElementById('studentsAttendanceDate');
+    if (!dateInput.value) {
+        dateInput.valueAsDate = new Date();
+    }
+
+    const classSelect = document.getElementById('studentsAttendanceClassSelect');
+
+
+    const selectedDate = dateInput.value;
+    const selectedClassId = classSelect.value;
+    const selectedStudentId = document.getElementById('studentsAttendanceStudentSelect').value;
+
+    const tableContent = document.getElementById('studentsAttendanceTableContent');
+    const statsSummary = document.getElementById('attendanceStatsSummary');
+
+    if (!selectedClassId) {
+        tableContent.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-chalkboard-teacher" style="font-size: 48px; color: #cbd5e0; margin-bottom: 15px;"></i>
+                <h3>الرجاء اختيار الفصل</h3>
+            </div>`;
+        statsSummary.style.display = 'none';
+        return;
+    }
+
+    tableContent.innerHTML = '<div class="loading"><div class="spinner"></div><p>جارٍ تحميل البيانات...</p></div>';
+    statsSummary.style.display = 'none';
+
+    try {
+        // Mode 1: Individual Student History
+        if (selectedStudentId) {
+            console.log(`Fetching history for student ${selectedStudentId}`);
+
+            let qAttendance;
+            if (selectedDate) {
+                const startOfMonth = new Date(selectedDate);
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+                const endOfMonth = new Date(startOfMonth);
+                endOfMonth.setMonth(startOfMonth.getMonth() + 1);
+                endOfMonth.setDate(0);
+                endOfMonth.setHours(23, 59, 59, 999);
+
+                qAttendance = query(
+                    collection(db, 'attendance'),
+                    where('studentId', '==', selectedStudentId),
+                    where('timestamp', '>=', startOfMonth),
+                    where('timestamp', '<=', endOfMonth),
+                    orderBy('timestamp', 'desc')
+                );
+            } else {
+                qAttendance = query(
+                    collection(db, 'attendance'),
+                    where('studentId', '==', selectedStudentId),
+                    orderBy('timestamp', 'desc'),
+                    limit(50)
+                );
+            }
+
+            const attendanceSnap = await getDocs(qAttendance);
+
+            let html = `
+                <div style="margin-bottom:15px; font-weight:bold; color:#2c3e50;">
+                    ${selectedDate ? 'سجل الحضور لشهر ' + new Date(selectedDate).toLocaleDateString('ar-EG', { month: 'long' }) : 'آخر 50 سجل حضور'}
+                </div>
+                <table class="attendance-log-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الوقت</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            if (attendanceSnap.empty) {
+                html += `<tr><td colspan="3" style="text-align:center;">لا توجد سجلات حضور مسجلة</td></tr>`;
+            } else {
+                attendanceSnap.forEach(doc => {
+                    const data = doc.data();
+                    const dateObj = data.timestamp ? data.timestamp.toDate() : null;
+                    if (dateObj) {
+                        html += `
+                            <tr>
+                                <td>${dateObj.toLocaleDateString('ar-EG')}</td>
+                                <td>${dateObj.toLocaleTimeString('ar-EG')}</td>
+                                <td><span class="status-badge status-active">حاضر</span></td>
+                            </tr>
+                        `;
+                    }
+                });
+            }
+            html += '</tbody></table>';
+            tableContent.innerHTML = html;
+            return;
+        }
+
+        // Mode 2: Whole Class Daily View (Existing Logic)
+        console.log(`Fetching students for class: ${selectedClassId}`);
+        const qStudents = query(collection(db, 'students'), where('classId', '==', selectedClassId));
+        const studentsSnap = await getDocs(qStudents);
+
+        console.log(`Found ${studentsSnap.size} students`);
+
+        if (studentsSnap.empty) {
+            tableContent.innerHTML = '<div class="empty-state"><p>لا يوجد طلاب في هذا الفصل</p></div>';
+            return;
+        }
+
+        const students = [];
+        studentsSnap.forEach(doc => {
+            students.push({ id: doc.id, ...doc.data() });
+        });
+
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        console.log(`Fetching attendance from ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+
+        const qAttendance = query(
+            collection(db, 'attendance'),
+            where('timestamp', '>=', startOfDay),
+            where('timestamp', '<=', endOfDay)
+        );
+
+        const attendanceSnap = await getDocs(qAttendance);
+        console.log(`Found ${attendanceSnap.size} attendance records`);
+
+        const attendanceMap = {}; // studentId -> status
+
+        attendanceSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.studentId) {
+                attendanceMap[data.studentId] = {
+                    status: data.status || 'Present',
+                    time: data.timestamp ? data.timestamp.toDate().toLocaleTimeString('ar-EG') : '-'
+                };
+            }
+        });
+
+        // 3. Merge and Display
+        let html = `
+            <table class="attendance-log-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الحالة</th>
+                        <th>وقت الحضور</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let presentCount = 0;
+        let absentCount = 0;
+        let lateCount = 0;
+
+        students.forEach(student => {
+            const record = attendanceMap[student.id];
+            let statusBadge = '';
+            let timeText = '-';
+
+            if (record) {
+                // Present
+                statusBadge = '<span class="status-badge status-active">حاضر</span>';
+                timeText = record.time;
+                presentCount++;
+            } else {
+                // Absent
+                statusBadge = '<span class="status-badge status-inactive">غائب</span>';
+                absentCount++;
+            }
+
+            html += `
+                <tr>
+                    <td>${student.fullName}</td>
+                    <td>${statusBadge}</td>
+                    <td>${timeText}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        tableContent.innerHTML = html;
+
+        // Update stats
+        document.getElementById('statPresent').textContent = presentCount;
+        document.getElementById('statAbsent').textContent = absentCount;
+        document.getElementById('statLate').textContent = lateCount; // Logic for late can be added later
+        statsSummary.style.display = 'grid';
+
+    } catch (error) {
+        console.error('Error loading students attendance:', error);
+        tableContent.innerHTML = '<div class="empty-state" style="color:red"><p>حدث خطأ في تحميل البيانات</p></div>';
+    }
+};
+
+// Helper: Populate Student Select based on Class
+window.populateStudentSelect = async function (classId) {
+    const studentSelect = document.getElementById('studentsAttendanceStudentSelect');
+    if (!classId) {
+        studentSelect.innerHTML = '<option value="">الكل</option>';
+        studentSelect.disabled = true;
+        return;
+    }
+
+    studentSelect.disabled = false;
+    studentSelect.innerHTML = '<option value="">جارٍ التحميل...</option>';
+
+    try {
+        console.log(`Fetching students for class ${classId}...`);
+        // Query the students collection directly
+        const q = query(collection(db, 'students'), where('classId', '==', classId));
+        const snap = await getDocs(q);
+
+        console.log(`Found ${snap.size} students in class`);
+
+        if (snap.empty) {
+            studentSelect.innerHTML = '<option value="">لا يوجد طلاب</option>';
+            return;
+        }
+
+        studentSelect.innerHTML = '<option value="">الكل (عرض يومي)</option>';
+        snap.forEach(doc => {
+            const student = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = student.fullName || student.name || 'طالب مجهول';
+            studentSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading students for select:', error);
+        studentSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+    }
+};
+
+// 2. Load Teachers Attendance View (Updated for Filtering)
+window.loadTeachersAttendanceView = async function () {
+    console.log('Loading Teachers Attendance View...');
+
+    // Populate teacher select (Force refresh)
+    const teacherSelect = document.getElementById('teachersAttendanceTeacherSelect');
+
+
+    const dateInput = document.getElementById('teachersAttendanceDate');
+    if (!dateInput.value) {
+        dateInput.valueAsDate = new Date();
+    }
+
+    const selectedDate = dateInput.value;
+    const selectedTeacherId = teacherSelect.value;
+    const tableContent = document.getElementById('teachersAttendanceTableContent');
+
+    tableContent.innerHTML = '<div class="loading"><div class="spinner"></div><p>جارٍ تحميل بيانات المعلمين...</p></div>';
+
+    try {
+        // Mode 1: Individual Teacher History (Full History)
+        if (selectedTeacherId) {
+            console.log(`Fetching full history for teacher ${selectedTeacherId}`);
+
+            let qAttendance;
+            if (selectedDate) {
+                // If date selected, look for that specific month's history
+                const startOfMonth = new Date(selectedDate);
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+                const endOfMonth = new Date(startOfMonth);
+                endOfMonth.setMonth(startOfMonth.getMonth() + 1);
+                endOfMonth.setDate(0);
+                endOfMonth.setHours(23, 59, 59, 999);
+
+                qAttendance = query(
+                    collection(db, 'attendance'),
+                    where('studentId', '==', selectedTeacherId),
+                    where('timestamp', '>=', startOfMonth),
+                    where('timestamp', '<=', endOfMonth),
+                    orderBy('timestamp', 'desc')
+                );
+            } else {
+                // No date selected -> get last 50 records
+                qAttendance = query(
+                    collection(db, 'attendance'),
+                    where('studentId', '==', selectedTeacherId),
+                    orderBy('timestamp', 'desc'),
+                    limit(50)
+                );
+            }
+
+            const attendanceSnap = await getDocs(qAttendance);
+
+            let html = `
+                <div style="margin-bottom:15px; font-weight:bold; color:#2c3e50;">
+                    ${selectedDate ? 'تاريخ الحضور لشهر ' + new Date(selectedDate).toLocaleDateString('ar-EG', { month: 'long' }) : 'آخر 50 سجل حضور'}
+                </div>
+                <table class="attendance-log-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الوقت</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            if (attendanceSnap.empty) {
+                html += `<tr><td colspan="3" style="text-align:center;">لا توجد سجلات حضور مسجلة</td></tr>`;
+            } else {
+                attendanceSnap.forEach(doc => {
+                    const data = doc.data();
+                    const dateObj = data.timestamp ? data.timestamp.toDate() : null;
+                    if (dateObj) {
+                        html += `
+                            <tr>
+                                <td>${dateObj.toLocaleDateString('ar-EG')}</td>
+                                <td>${dateObj.toLocaleTimeString('ar-EG')}</td>
+                                <td><span class="status-badge status-active">حاضر</span></td>
+                            </tr>
+                        `;
+                    }
+                });
+            }
+            html += '</tbody></table>';
+            tableContent.innerHTML = html;
+            return;
+        }
+
+        // Mode 2: All Teachers for Specific Day (Existing Logic)
+        console.log('Fetching all teachers for daily view...');
+        const qTeachers = query(collection(db, 'users'), where('role', '==', 'teacher'));
+        const teachersSnap = await getDocs(qTeachers);
+
+        console.log(`Found ${teachersSnap.size} teachers`);
+
+        if (teachersSnap.empty) {
+            tableContent.innerHTML = '<div class="empty-state"><p>لا يوجد معلمين في النظام</p></div>';
+            return;
+        }
+
+        const teachers = [];
+        teachersSnap.forEach(doc => {
+            teachers.push({ id: doc.id, ...doc.data() });
+        });
+
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        console.log(`Fetching teacher attendance from ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+
+        const qAttendance = query(
+            collection(db, 'attendance'),
+            where('timestamp', '>=', startOfDay),
+            where('timestamp', '<=', endOfDay)
+        );
+
+        const attendanceSnap = await getDocs(qAttendance);
+        console.log(`Found ${attendanceSnap.size} attendance records`);
+        const attendanceMap = {};
+
+        attendanceSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.studentId) {
+                attendanceMap[data.studentId] = {
+                    status: data.status || 'Present',
+                    time: data.timestamp ? data.timestamp.toDate().toLocaleTimeString('ar-EG') : '-'
+                };
+            }
+        });
+
+        let html = `
+            <table class="attendance-log-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>التخصص</th>
+                        <th>الحالة</th>
+                        <th>وقت الحضور</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        teachers.forEach(teacher => {
+            const record = attendanceMap[teacher.id];
+            let statusBadge = '';
+            let timeText = '-';
+
+            if (record) {
+                statusBadge = '<span class="status-badge status-active">حاضر</span>';
+                timeText = record.time;
+            } else {
+                statusBadge = '<span class="status-badge status-inactive">غائب</span>';
+            }
+
+            html += `
+                <tr>
+                    <td>${teacher.fullName}</td>
+                    <td>${teacher.subject || '-'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${timeText}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        tableContent.innerHTML = html;
+
+    } catch (error) {
+        console.error('Error loading teachers attendance:', error);
+        tableContent.innerHTML = '<div class="empty-state" style="color:red"><p>حدث خطأ في تحميل البيانات</p></div>';
+    }
+};
+
+// Helper: Populate Teacher Select
+window.populateTeacherSelect = async function (selectElement) {
+    if (!selectElement) return;
+    // Don't re-populate if already has options (to avoid losing selection)
+    if (selectElement.options.length > 1) {
+        console.log('Teacher select already populated, skipping...');
+        return;
+    }
+    console.log('Populating Teacher Select...');
+    console.trace('populateTeacherSelect trace:');
+
+    try {
+        const q = query(collection(db, 'users'), where('role', 'in', ['teacher', 'Teacher']));
+        const querySnapshot = await getDocs(q);
+        console.log(`Found ${querySnapshot.size} teachers for dropdown`);
+
+        selectElement.innerHTML = '<option value="">كل المعلمين</option>';
+        querySnapshot.forEach((doc) => {
+            const teacher = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = teacher.fullName || teacher.name || 'معلم مجهول';
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading teachers:', error);
+    }
+}
+
+// Helper: Populate Class Select
+window.populateClassSelect = async function (selectElement) {
+    if (!selectElement) return;
+    // Don't re-populate if already has options (to avoid losing selection)
+    if (selectElement.options.length > 1) {
+        console.log('Class select already populated, skipping...');
+        return;
+    }
+    console.log('Populating Class Select...');
+    console.trace('populateClassSelect trace:');
+
+    try {
+        const q = query(collection(db, 'classes'));
+        const querySnapshot = await getDocs(q);
+        selectElement.innerHTML = '<option value="">اختر الفصل</option>';
+        querySnapshot.forEach((doc) => {
+            const classData = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = classData.name || classData.className || 'Unnamed Class';
+            selectElement.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading classes:', error);
+    }
+}
+
+
+

@@ -1,9 +1,7 @@
 // js/teacher.js
 console.log('Teacher Dashboard Script v6 Loaded');
 import { db, FirebaseHelpers } from './firebaseConfig.js';
-import { startAttendanceScanning } from './attendanceManager.js';
-import { initScanner, stopScanner } from './attendance-scanner.js';
-import { initGenerator } from './generator.js';
+// Removed QR imports as per request
 import {
     collection,
     doc,
@@ -16,7 +14,9 @@ import {
     query,
     where,
     orderBy,
-    serverTimestamp
+    limit,
+    serverTimestamp,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // ===== STATE =====
@@ -24,40 +24,30 @@ let currentTeacher = null;
 let isLoading = false;
 
 // ===== UI NAVIGATION =====
-window.showSection = function (sectionId) {
-    // Hide all main sections
-    const sections = ['statsSection', 'classesSection', 'scannerSection', 'generatorSection'];
-
-    // Also hide schedule container manually if it exists from viewCurrentSchedule
-    const scheduleContainer = document.querySelector('.schedule-management');
-    if (scheduleContainer && scheduleContainer.parentElement.id !== sectionId) {
-        // If the schedule is NOT inside the requested section, we might need to hide it
-        // But schedule uses a different mechanism (dynamic replacement).
-        // Let's assume viewCurrentSchedule clears the main area or we just hide the known sections.
-    }
-
+window.showSection = (sectionId) => {
+    // Hide all sections
+    const sections = ['statsSection', 'classesSection', 'lmsSection', 'announcementsSection', 'aiAssistantSection', 'scannerSection', 'generatorSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // Special case: if switching AWAY from schedule view (which usually replaces content or hides others)
-    // We ensure our sections are hidden first.
-
-    // Show requested section
+    // Show targets
     const target = document.getElementById(sectionId);
-    if (target) target.style.display = 'block';
-
-    // Handle specific section logic
-    if (sectionId === 'scannerSection') {
-        initScanner('reader');
-    } else {
-        stopScanner();
+    if (target) {
+        target.style.display = 'block';
+        target.classList.add('active');
     }
 
-    if (sectionId === 'generatorSection') {
-        initGenerator();
-    }
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+    const activeLink = document.querySelector(`a[onclick*="${sectionId}"]`);
+    if (activeLink) activeLink.classList.add('active');
+
+    // Dynamic Loading
+    if (sectionId === 'announcementsSection') loadAnnouncements();
+    if (sectionId === 'statsSection') loadStatistics(); // Changed loadStats to loadStatistics as per existing function
+    if (sectionId === 'aiAssistantSection') window.scrollTo(0, 0);
 };
 
 // ===== INITIALIZATION =====
@@ -67,9 +57,11 @@ async function init() {
     if (isLoading) return;
     isLoading = true;
 
-    // Show default sections
+    // Small delay to ensure Firebase and other modules are fully ready
+    await new Promise(r => setTimeout(r, 200));
+
+    // Show default section
     window.showSection('statsSection');
-    document.getElementById('classesSection').style.display = 'block';
 
     try {
         // Get user from session
@@ -84,9 +76,10 @@ async function init() {
         await loadTeacherData(user.uid);
         updateCurrentDate();
 
-        await Promise.all([
+        await Promise.allSettled([
             loadStatistics(),
-            loadTeacherClasses()
+            loadTeacherClasses(),
+            initNotifications()
         ]);
 
     } catch (error) {
@@ -131,14 +124,214 @@ async function loadTeacherData(uid) {
         }
 
         const classesCount = currentTeacher.classes ? currentTeacher.classes.length : 0;
-        // document.getElementById('totalClasses').textContent = classesCount; // Removed as element doesn't exist
 
+        // Load Home Page Widgets
+        await loadDashboardWidgets();
 
     } catch (error) {
         FirebaseHelpers.logError('Load Teacher', error);
         throw error;
     }
 }
+
+// ===== DASHBOARD WIDGETS =====
+async function loadDashboardWidgets() {
+    const statsGrid = document.querySelector('.stats-grid');
+    if (!statsGrid) return;
+
+    // 1. Recent Announcements Check
+    try {
+        const q = query(
+            collection(db, 'announcements'),
+            where('target', 'in', ['all', 'teachers']),
+            limit(20) // Get more to sort client-side
+        );
+        const snapshot = await getDocs(q);
+        // Client-side sort as fallback for missing index
+        const sortedDocs = snapshot.docs.sort((a, b) => {
+            const timeA = a.data().timestamp?.toMillis() || 0;
+            const timeB = b.data().timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+    } catch (e) {
+        console.warn('Announcement widget fetch failed:', e);
+    }
+
+    // 2. Today's Schedule (Mini-list)
+    try {
+        if (!currentTeacher) return;
+        const todayId = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const q = query(
+            collection(db, 'schedule'),
+            where('teacherId', '==', currentTeacher.id),
+            where('day', '==', todayId)
+        );
+        const snapshot = await getDocs(q);
+        // Client-side sort fallback
+        const items = snapshot.docs.map(doc => doc.data())
+            .sort((a, b) => (a.sessionOrder || 0) - (b.sessionOrder || 0));
+
+        const todaySessionsEl = document.getElementById('todaySessionsCount');
+        if (todaySessionsEl) todaySessionsEl.textContent = snapshot.size;
+    } catch (e) {
+        console.error('Error loading schedule widget:', e);
+    }
+}
+
+// ===== ANNOUNCEMENTS & NOTIFICATIONS =====
+let announcementsUnsubscribe = null;
+
+function initNotifications() {
+    const badge = document.getElementById('notifBadge');
+    if (!badge) return;
+
+    // Listen for new announcements
+    const q = query(
+        collection(db, 'announcements'),
+        where('target', 'in', ['all', 'teachers'])
+    );
+
+    announcementsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const count = snapshot.size;
+
+        // Sort client-side for notification logic if needed
+        const docs = snapshot.docs.sort((a, b) => {
+            const timeA = a.data().timestamp?.toMillis() || 0;
+            const timeB = b.data().timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
+        // Filter by 'viewed' status could be added here if we had a local storage list of read IDs
+        const lastViewed = localStorage.getItem('lastAnnouncementViewed') || 0;
+        let newCount = 0;
+
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.timestamp && data.timestamp.toMillis() > lastViewed) {
+                newCount++;
+            }
+        });
+
+        if (newCount > 0) {
+            badge.textContent = newCount;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    });
+}
+
+window.loadAnnouncements = async function () {
+    const container = document.getElementById('announcementsContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const q = query(
+            collection(db, 'announcements'),
+            where('target', 'in', ['all', 'teachers'])
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-bullhorn" style="opacity: 0.2; font-size: 50px;"></i>
+                    <p>لا توجد إعلانات حالياً.</p>
+                </div>`;
+            return;
+        }
+
+        // Client-side sorting
+        const sortedDocs = snapshot.docs.sort((a, b) => {
+            const timeA = a.data().timestamp?.toMillis() || 0;
+            const timeB = b.data().timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
+        let html = '';
+        sortedDocs.forEach(doc => {
+            const ann = doc.data();
+            const time = ann.timestamp ? ann.timestamp.toDate().toLocaleString('ar-EG') : 'الآن';
+
+            html += `
+                <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; border-right: 4px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--glass-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <h3 style="margin: 0; color: var(--text-main); font-size: 18px;">${ann.title}</h3>
+                        <span style="font-size: 12px; color: var(--text-muted); background: var(--glass); padding: 4px 10px; border-radius: 20px;"><i class="fas fa-clock"></i> ${time}</span>
+                    </div>
+                    <p style="color: var(--text-main); opacity: 0.9; line-height: 1.7; margin: 0;">${ann.body || ann.content || ''}</p>
+                </div>`;
+        });
+
+        container.innerHTML = html;
+
+        // Mark as read
+        localStorage.setItem('lastAnnouncementViewed', Date.now());
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+
+    } catch (error) {
+        console.error('Announcements Error:', error);
+        container.innerHTML = '<p style="text-align: center; color: var(--danger); padding: 20px;">فشل تحميل الإعلانات.</p>';
+    }
+}
+
+// ===== AI TEACHER ASSISTANT =====
+window.sendMessageToAI = async function () {
+    const input = document.getElementById('aiQueryInput');
+    const container = document.getElementById('aiChatContainer');
+    const query = input.value.trim();
+
+    if (!query) return;
+
+    // Append user message
+    container.innerHTML += `
+        <div class="user-message" style="background: var(--primary); color: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; align-self: flex-end; margin-right: 20px;">
+            ${query}
+        </div>`;
+
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
+
+    // Show typing
+    const typingId = 'typing-' + Date.now();
+    container.innerHTML += `<div id="${typingId}" style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;"><i class="fas fa-circle-notch fa-spin"></i> المساعد يفكر...</div>`;
+
+    try {
+        // Here we would normally call Google Gemini API via a Firebase Function or similar
+        // For demonstration in the competition, we'll simulate a very smart response
+        setTimeout(() => {
+            document.getElementById(typingId).remove();
+            let response = "بناءً على خبرتي التربوية، إليك هذه الفكرة: ";
+            if (query.includes('درس')) response += "يمكنك تقسيم الطلاب إلى مجموعات وإعطاء كل مجموعة لغزاً يتعلق بالمفهوم الأساسي للدرس.";
+            else if (query.includes('اختبار')) response += "أنصحك بالتركيز على أسئلة قياس المهارات العليا (التفكير النقدي) بدلاً من الحفظ فقط.";
+            else response += "هذا موضوع رائع! يمكنني مساعدتك في وضع خطة مفصلة لذلك إذا أردت.";
+
+            container.innerHTML += `
+                <div class="ai-message" style="background: var(--glass); padding: 12px; border-radius: 12px; margin-bottom: 10px; border-right: 3px solid #8b5cf6;">
+                    ${response}
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }, 1500);
+    } catch (err) {
+        document.getElementById(typingId).innerHTML = "حدث خطأ في الاتصال بالذكاء الاصطناعي.";
+    }
+};
+
+window.generateLessonIdeas = () => {
+    document.getElementById('aiQueryInput').value = "أقترح علي أفكار إبداعية لشرح درس جديد بطريقة تفاعلية";
+    sendMessageToAI();
+};
+window.generateQuizIdeas = () => {
+    document.getElementById('aiQueryInput').value = "ساعدني في وضع أسئلة اختبار ذكي تقيس فهم الطلاب العميق";
+    sendMessageToAI();
+};
+window.generateEmailDraft = () => {
+    document.getElementById('aiQueryInput').value = "أكتب لي مسودة رسالة احترافية لأولياء الأمور حول تقدم الطلاب";
+    sendMessageToAI();
+};
 
 // ===== LOAD STATISTICS =====
 async function loadStatistics() {
@@ -2193,3 +2386,192 @@ window.scrollToSection = function (sectionId) {
         element.scrollIntoView({ behavior: 'smooth' });
     }
 };
+
+// --- LMS Functions ---
+let currentLMSTab = 'assignments';
+
+window.switchLMSTab = function (tab) {
+    currentLMSTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.borderBottom = '2px solid transparent';
+        btn.style.color = '#95a5a6';
+    });
+    const activeBtn = document.getElementById('tab-' + tab);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.borderBottom = '2px solid #3498db';
+        activeBtn.style.color = '#2c3e50';
+    }
+    loadLMSContent();
+};
+
+window.loadLMSContent = async function () {
+    const container = document.getElementById('lmsContentContainer');
+    if (!container) return;
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const collectionName = currentLMSTab === 'assignments' ? 'assignments' : 'materials';
+        // Simplified query to avoid composite index requirement
+        const q = query(
+            collection(db, collectionName),
+            where('teacherId', '==', currentTeacher.id)
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align: center; opacity: 0.5; padding: 40px;">لا يوجد محتوى مضاف حالياً.</p>';
+            return;
+        }
+
+        // Client-side sorting
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => {
+                const timeA = a.timestamp?.toMillis() || 0;
+                const timeB = b.timestamp?.toMillis() || 0;
+                return timeB - timeA;
+            });
+
+        let html = '<div style="display: grid; gap: 15px;">';
+        items.forEach(item => {
+            const date = item.timestamp ? item.timestamp.toDate().toLocaleDateString('ar-EG') : '-';
+
+            if (currentLMSTab === 'assignments') {
+                html += `
+                    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-right: 4px solid #3498db;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <h4 style="margin: 0; color: #2c3e50;">${item.title}</h4>
+                            <span style="font-size: 12px; color: #e74c3c; font-weight: bold;">الموعد: ${item.deadline}</span>
+                        </div>
+                        <p style="margin: 10px 0; font-size: 14px; color: #7f8c8d;">${item.description}</p>
+                        <div style="font-size: 12px; color: #95a5a6;">الفصل: ${item.className} | تاريخ النشر: ${date}</div>
+                    </div>`;
+            } else {
+                html += `
+                    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-right: 4px solid #27ae60;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; color: #2c3e50;">${item.title}</h4>
+                            <a href="${item.url}" target="_blank" class="btn-main" style="padding: 5px 15px; font-size: 12px; background: #27ae60;">فتح الرابط</a>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 12px; color: #95a5a6;">الفصل: ${item.className} | تاريخ النشر: ${date}</div>
+                    </div>`;
+            }
+        });
+        html += '</div>';
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error('LMS Load Error:', err);
+        container.innerHTML = '<p style="color: #e74c3c; text-align: center; padding: 20px;">فشل تحميل المحتوى. تأكد من إعدادات قاعدة البيانات.</p>';
+    }
+};
+
+window.openAddAssignmentModal = function () {
+    populateClassSelect('assignClass');
+    document.getElementById('assignmentModal').style.display = 'block';
+};
+
+window.openAddMaterialModal = function () {
+    populateClassSelect('materialClass');
+    document.getElementById('materialModal').style.display = 'block';
+};
+
+window.closeModal = function (id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'none';
+};
+
+function populateClassSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select || !currentTeacher || !currentTeacher.classes) return;
+
+    select.innerHTML = '<option value="" disabled selected>اختر الفصل...</option>';
+    currentTeacher.classes.forEach(async (classId) => {
+        const classDoc = await getDoc(doc(db, 'classes', classId));
+        if (classDoc.exists()) {
+            const classData = classDoc.data();
+            select.innerHTML += `<option value="${classId}" data-name="${classData.name}">${classData.name}</option>`;
+        }
+    });
+}
+
+// Form Handlers
+document.addEventListener('submit', async (e) => {
+    if (e.target.id === 'assignmentForm') {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('button');
+        const classSelect = document.getElementById('assignClass');
+        if (!classSelect.value) {
+            FirebaseHelpers.showToast('يرجى اختيار الفصل', 'error');
+            return;
+        }
+        const selectedClass = classSelect.options[classSelect.selectedIndex];
+
+        const data = {
+            title: document.getElementById('assignTitle').value,
+            classId: classSelect.value,
+            className: selectedClass.getAttribute('data-name'),
+            deadline: document.getElementById('assignDeadline').value,
+            description: document.getElementById('assignDesc').value,
+            teacherId: currentTeacher.id,
+            subjectId: currentTeacher.subjectId || '',
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            btn.disabled = true;
+            btn.textContent = 'جاري النشر...';
+            await addDoc(collection(db, 'assignments'), data);
+            FirebaseHelpers.showToast('تم نشر الواجب بنجاح');
+            closeModal('assignmentModal');
+            form.reset();
+            if (currentLMSTab === 'assignments') loadLMSContent();
+        } catch (err) {
+            console.error(err);
+            FirebaseHelpers.showToast('فشل في نشر الواجب', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'نشر الواجب للطلاب';
+        }
+    }
+
+    if (e.target.id === 'materialForm') {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('button');
+        const classSelect = document.getElementById('materialClass');
+        if (!classSelect.value) {
+            FirebaseHelpers.showToast('يرجى اختيار الفصل', 'error');
+            return;
+        }
+        const selectedClass = classSelect.options[classSelect.selectedIndex];
+
+        const data = {
+            title: document.getElementById('materialTitle').value,
+            classId: classSelect.value,
+            className: selectedClass.getAttribute('data-name'),
+            url: document.getElementById('materialUrl').value,
+            teacherId: currentTeacher.id,
+            subjectId: currentTeacher.subjectId || '',
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            btn.disabled = true;
+            btn.textContent = 'جاري النشر...';
+            await addDoc(collection(db, 'materials'), data);
+            FirebaseHelpers.showToast('تم نشر المادة العلمية بنجاح');
+            closeModal('materialModal');
+            form.reset();
+            if (currentLMSTab === 'materials') loadLMSContent();
+        } catch (err) {
+            console.error(err);
+            FirebaseHelpers.showToast('فشل في نشر المادة', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'نشر المادة العلمية';
+        }
+    }
+});

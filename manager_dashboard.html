@@ -7,6 +7,8 @@
     <title>لوحة تحكم المدير - نظام إدارة المدرسة</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global.css">
+    <script src="js/theme.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,7 +18,8 @@
 
         body {
             font-family: 'Cairo', sans-serif;
-            background: #f5f7fa;
+            background: var(--main-bg);
+            color: var(--text-main);
             min-height: 100vh;
         }
 
@@ -53,6 +56,25 @@
             display: flex;
             align-items: center;
             gap: 20px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--warning);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
         }
 
         .user-avatar {
@@ -279,6 +301,33 @@
         .action-btn p {
             font-size: 13px;
             color: #7f8c8d;
+        }
+
+        /* Search Button Styling */
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            height: 42px;
+            margin-top: 28px;
+        }
+
+        .search-btn:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn i {
+            font-size: 16px;
         }
 
         /* Table Container */
@@ -609,11 +658,16 @@
             }
         }
     </style>
-    <script type="module" src="js/dashboardGuard.js"></script>
-    <!-- QR Libraries -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- QR Libraries (must load BEFORE module scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@1.3.0/dist/html5-qrcode.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
+    <!-- Excel Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Module Scripts (after external libraries) -->
+    <script type="module" src="js/dashboardGuard.js"></script>
     <script type="module" src="js/manager.js"></script>
     <!-- Modals -->
     <style>
@@ -1059,15 +1113,25 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transition: background 0.3s;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
         .hamburger-menu:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .hamburger-menu:active {
+            transform: translateY(-50%) scale(0.95);
         }
 
         .sidebar {
@@ -1076,10 +1140,10 @@
             left: -300px;
             width: 300px;
             height: 100vh;
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.4);
             z-index: 1002;
-            transition: left 0.3s ease;
+            transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             display: flex;
             flex-direction: column;
             direction: rtl;
@@ -1087,20 +1151,32 @@
 
         .sidebar.active {
             left: 0;
+            box-shadow: 2px 0 30px rgba(102, 126, 234, 0.2);
         }
 
         .sidebar-header {
-            padding: 20px;
+            padding: 25px 20px;
             color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), transparent);
         }
 
         .sidebar-header h3 {
             margin: 0;
-            font-size: 18px;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header h3::before {
+            content: '☰';
+            font-size: 22px;
+            color: #667eea;
         }
 
         .close-btn {
@@ -1155,16 +1231,36 @@
         .sidebar-menu a {
             display: flex;
             align-items: center;
-            padding: 15px 20px;
+            padding: 14px 20px;
             color: #ecf0f1;
             text-decoration: none;
-            transition: background 0.3s;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             border-right: 4px solid transparent;
+            position: relative;
+            margin: 5px 0;
+        }
+
+        .sidebar-menu a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.2), transparent);
+            transition: width 0.3s ease;
+            z-index: -1;
         }
 
         .sidebar-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-right-color: #3498db;
+            background: rgba(102, 126, 234, 0.15);
+            border-right-color: #667eea;
+            padding-left: 25px;
+            color: #fff;
+        }
+
+        .sidebar-menu a:hover::before {
+            width: 100%;
         }
 
         .sidebar-menu i {
@@ -1214,80 +1310,123 @@
     <!-- Sidebar Navigation -->
     <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
-            <h3>القائمة</h3>
+            <h3><i class="fas fa-bars" style="color: #667eea;"></i> القائمة</h3>
             <button class="close-btn" onclick="closeSidebar()">&times;</button>
         </div>
         <ul class="sidebar-menu">
+            <!-- Main Dashboard -->
             <li>
-                <a href="#" onclick="scrollToSection('welcomeSection'); closeSidebar();">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>لوحة التحكم</span>
+                <a href="#" onclick="showSection('statsSection'); closeSidebar();" class="active-link" id="link-stats">
+                    <i class="fas fa-home"></i>
+                    <span>اللوحة الرئيسية</span>
                 </a>
             </li>
+
+            <!-- Teachers Management -->
             <li>
-                <a href="#" onclick="scrollToSection('teachersTable'); closeSidebar();">
+                <a href="#" onclick="showSection('teachersManagementSection'); closeSidebar();" id="link-teachers">
                     <i class="fas fa-chalkboard-teacher"></i>
-                    <span>المدرسين</span>
+                    <span>إدارة المعلمين</span>
                 </a>
             </li>
+
+            <!-- Students Management -->
             <li>
-                <a href="#" onclick="scrollToSection('classesTable'); closeSidebar();">
+                <a href="#" onclick="showSection('studentsManagementSection'); closeSidebar();" id="link-students">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>إدارة الطلاب</span>
+                </a>
+            </li>
+
+            <!-- Classes Management -->
+            <li>
+                <a href="#" onclick="showSection('classesManagementSection'); closeSidebar();" id="link-classes">
                     <i class="fas fa-school"></i>
-                    <span>الفصول</span>
+                    <span>إدارة الفصول</span>
                 </a>
             </li>
+
+            <!-- Teachers Attendance -->
             <li>
-                <a href="#" onclick="showTeacherAttendance(); closeSidebar();">
-                    <i class="fas fa-calendar-check"></i>
-                    <span>الحضور</span>
+                <a href="#" onclick="showSection('teachersAttendanceSection'); closeSidebar();"
+                    id="link-teachers-attendance">
+                    <i class="fas fa-user-clock"></i>
+                    <span>حضور المعلمين</span>
                 </a>
             </li>
+
+            <!-- Students Attendance -->
             <li>
-                <a href="#" onclick="viewTeacherAttendance(); closeSidebar();">
+                <a href="#" onclick="showSection('studentsAttendanceSection'); closeSidebar();"
+                    id="link-students-attendance">
+                    <i class="fas fa-tasks"></i>
+                    <span>حضور الطلاب</span>
+                </a>
+            </li>
+
+            <!-- Announcements -->
+            <li>
+                <a href="#" onclick="showSection('announcementsSection'); closeSidebar();" id="link-announcements">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>الإعلانات المدرسية</span>
+                </a>
+            </li>
+
+            <!-- Class Schedules -->
+            <li>
+                <a href="#" onclick="showSection('schedulesSection'); closeSidebar();" id="link-schedules">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>الجداول الدراسية</span>
+                </a>
+            </li>
+
+            <!-- Analytics -->
+            <li>
+                <a href="#" onclick="showSection('analyticsSection'); closeSidebar();" id="link-analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>الإحصائيات والتحليلات</span>
+                </a>
+            </li>
+
+            <!-- Activity Logs -->
+            <li>
+                <a href="#" onclick="showSection('logsSection'); closeSidebar();" id="link-logs">
                     <i class="fas fa-history"></i>
-                    <span>سجل الحضور</span>
+                    <span>سجل النشاطات</span>
                 </a>
             </li>
+
+            <!-- QR Scanner -->
             <li>
-                <a href="#" onclick="showAssignTeacherToClassModal(); closeSidebar();">
-                    <i class="fas fa-user-plus"></i>
-                    <span>تعيين المدرسين</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="showStudentAttendanceLogs(); closeSidebar();">
-                    <i class="fas fa-calendar-check"></i>
-                    <span>سجلات الحضور</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="showAddTeacherModal(); closeSidebar();">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>إضافة مدرس</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="scrollToSection('classesSection'); closeSidebar();">
-                    <i class="fas fa-chalkboard"></i>
-                    <span>الفصول الدراسية</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="showSection('scannerSection'); closeSidebar();">
+                <a href="#" onclick="showSection('scannerSection'); closeSidebar();" id="link-scanner">
                     <i class="fas fa-qrcode"></i>
-                    <span>ماسح الحضور</span>
+                    <span>مسح الكيو ار كود</span>
                 </a>
             </li>
+
+            <!-- QR Generator -->
             <li>
-                <a href="#" onclick="showSection('generatorSection'); closeSidebar();">
+                <a href="#" onclick="showSection('generatorSection'); closeSidebar();" id="link-generator">
                     <i class="fas fa-print"></i>
-                    <span>توليد رموز QR</span>
+                    <span>طباعة الكيو ار كود</span>
                 </a>
             </li>
+
+            <!-- Data Management -->
             <li>
-                <a href="#" onclick="logoutUser(); closeSidebar();">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>تسجيل خروج</span>
+                <a href="#" onclick="showSection('dataManagementSection'); closeSidebar();" id="link-data">
+                    <i class="fas fa-database"></i>
+                    <span>ترقية الدفعات</span>
+                </a>
+            </li>
+
+            <!-- Logout -->
+            <hr style="margin: 20px 0; opacity: 0.2; border: none; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+            <li>
+                <a href="#" onclick="logoutUser(); closeSidebar();"
+                    style="border-right: 4px solid #e74c3c; background: rgba(231, 76, 60, 0.15);">
+                    <i class="fas fa-power-off" style="color: #e74c3c;"></i>
+                    <span style="color: #e74c3c; font-weight: 700;">تسجيل الخروج</span>
                 </a>
             </li>
         </ul>
@@ -1307,15 +1446,22 @@
         </div>
 
         <div class="user-menu">
+            <div id="themeToggle" class="theme-toggle-btn" title="تبديل الوضع">
+                <i class="fas fa-moon"></i>
+            </div>
             <div class="user-avatar" id="userAvatar">م</div>
             <div class="user-info">
                 <h3 id="userName">المدير</h3>
-                <p>مدير النظام</p>
+                <p id="userEmail">البريد الإلكتروني</p>
             </div>
+            <button class="logout-btn" onclick="logoutUser()">
+                <i class="fas fa-sign-out-alt"></i> خروج
+            </button>
         </div>
     </nav>
 
     <div class="container">
+        <!-- 1. Stats Section (Main Dashboard) -->
         <div id="statsSection">
             <div class="welcome-section">
                 <h2>مرحباً، <span id="welcomeName">المدير</span> 👋</h2>
@@ -1366,49 +1512,68 @@
             </div>
         </div>
 
-        <h2 class="section-title">
-            <i class="fas fa-bolt"></i>
-            إجراءات سريعة
-        </h2>
-
-        <div class="quick-actions">
-            <div class="action-btn" onclick="showAddTeacherModal()">
-                <i class="fas fa-user-plus"></i>
-                <h3>إضافة مدرس</h3>
-                <p>تسجيل مدرس جديد</p>
-            </div>
-
-            <div class="action-btn" onclick="showAddClassModal()">
-                <i class="fas fa-door-open"></i>
-                <h3>إنشاء فصل</h3>
-                <p>فصل دراسي جديد</p>
-            </div>
-
-            <div class="action-btn" onclick="showTeacherAttendance()">
-                <i class="fas fa-calendar-check"></i>
-                <h3>تسجيل حضور المدرسين</h3>
-                <p>تسجيل حضور المدرسين</p>
-            </div>
-
-            <div class="action-btn" onclick="viewTeacherAttendance()">
-                <i class="fas fa-history"></i>
-                <h3>سجل الحضور</h3>
-                <p>عرض سجل حضور المدرسين</p>
-            </div>
-        </div>
-
-        <div id="teachersSection">
-            <h2 class="section-title" id="teachersTable">
+        <!-- 2. Teachers Management Section -->
+        <div id="teachersManagementSection" style="display: none;">
+            <h2 class="section-title">
                 <i class="fas fa-chalkboard-teacher"></i>
-                قائمة المدرسين
+                إدارة المعلمين
             </h2>
 
+            <!-- Actions specific to Teachers -->
+            <div class="quick-actions">
+                <div class="action-btn" onclick="showAddTeacherModal()">
+                    <i class="fas fa-user-plus"></i>
+                    <h3>إضافة معلم</h3>
+                    <p>يدوياً</p>
+                </div>
+
+                <!-- Excel Upload for Teachers -->
+                <div class="action-btn" onclick="document.getElementById('teachersExcelInput').click();">
+                    <i class="fas fa-file-excel" style="color: #27ae60;"></i>
+                    <h3>رفع ملف Excel</h3>
+                    <p>إضافة معلمين دفعة واحدة</p>
+                    <input type="file" id="teachersExcelInput" accept=".xlsx,.xls" style="display: none;"
+                        onchange="handleTeachersExcelUpload(event)">
+                </div>
+
+                <div class="action-btn" onclick="showTeacherAttendance()">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>تسجيل حضور</h3>
+                    <p>تسجيل حضور اليوم</p>
+                </div>
+
+                <div class="action-btn" onclick="viewTeacherAttendance()">
+                    <i class="fas fa-history"></i>
+                    <h3>سجل الحضور</h3>
+                    <p>عرض السجل</p>
+                </div>
+
+                <div class="action-btn" onclick="showAssignTeacherModal()">
+                    <i class="fas fa-link"></i>
+                    <h3>إسناد فصل</h3>
+                    <p>تعيين معلم لفصل</p>
+                </div>
+
+                <div class="action-btn" onclick="exportTeachersData()">
+                    <i class="fas fa-download"></i>
+                    <h3>تحميل البيانات</h3>
+                    <p>ملف Excel</p>
+                </div>
+            </div>
+
+            <!-- Teachers Table -->
             <div class="table-container">
-                <div class="table-header">
-                    <h3>المدرسين المسجلين</h3>
-                    <button class="add-btn" onclick="showAddTeacherModal()">
-                        <i class="fas fa-plus"></i> إضافة مدرس
-                    </button>
+                <div class="table-header"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h3>قائمة المعلمين</h3>
+                    <div class="search-box" style="position: relative; min-width: 250px;">
+                        <i class="fas fa-search"
+                            style="position: absolute; right: 12px; top: 12px; color: #95a5a6;"></i>
+                        <input type="text" id="teacherSearchInput" onkeyup="filterTeachersTable()"
+                            placeholder="بحث باسم المعلم أو المادة..."
+                            style="width: 100%; padding: 10px 35px 10px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                    </div>
+                    <span id="teachersFileName" style="font-size: 12px; color: #27ae60;"></span>
                 </div>
                 <div id="teachersTableContent">
                     <div class="loading">
@@ -1418,20 +1583,277 @@
             </div>
         </div>
 
-        <div id="classesSection">
-            <h2 class="section-title" id="classesTable">
-                <i class="fas fa-school"></i>
-                الفصول الدراسية
+        <!-- 3. Students Management Section -->
+        <div id="studentsManagementSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-user-graduate"></i>
+                إدارة الطلاب
             </h2>
+
+            <!-- Actions for Students -->
+            <div class="quick-actions">
+                <!-- Excel Upload for Students -->
+                <div class="action-btn" onclick="document.getElementById('studentsExcelInput').click();">
+                    <i class="fas fa-file-excel" style="color: #27ae60;"></i>
+                    <h3>رفع ملف Excel</h3>
+                    <p>إضافة طلاب دفعة واحدة</p>
+                    <input type="file" id="studentsExcelInput" accept=".xlsx,.xls" style="display: none;"
+                        onchange="handleStudentsExcelUpload(event)">
+                </div>
+
+                <div class="action-btn" onclick="exportStudentsData()">
+                    <i class="fas fa-download"></i>
+                    <h3>تحميل البيانات</h3>
+                    <p>ملف Excel</p>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <span id="studentsFileName" style="font-size: 14px; color: #27ae60; font-weight: bold;"></span>
+            </div>
+
+            <!-- Students by Class View -->
+            <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #9b59b6; padding-bottom: 10px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="margin: 0; color: #2c3e50;">
+                        <i class="fas fa-users-class"></i> الطلاب حسب الفصول
+                    </h3>
+                    <div class="search-box" style="position: relative; min-width: 300px;">
+                        <i class="fas fa-search"
+                            style="position: absolute; right: 12px; top: 12px; color: #95a5a6;"></i>
+                        <input type="text" id="studentSearchInput" onkeyup="filterStudentsView()"
+                            placeholder="بحث باسم الطالب أو البريد..."
+                            style="width: 100%; padding: 10px 35px 10px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <div id="classesStudentsContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>جارٍ تحميل الفصول...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Classes Management Section -->
+        <div id="classesManagementSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-school"></i>
+                إدارة الفصول
+            </h2>
+
+            <div class="quick-actions">
+                <div class="action-btn" onclick="showAddClassModal()">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>إضافة فصل</h3>
+                    <p>إنشاء فصل جديد</p>
+                </div>
+            </div>
 
             <div class="table-container">
                 <div class="table-header">
                     <h3>الفصول المتاحة</h3>
-                    <button class="add-btn" onclick="showAddClassModal()">
-                        <i class="fas fa-plus"></i> إنشاء فصل
-                    </button>
                 </div>
                 <div id="classesTableContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Teachers Attendance Section -->
+        <div id="teachersAttendanceSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-user-clock"></i>
+                حضور المعلمين
+            </h2>
+
+            <div
+                style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">المعلم (اختياري)</label>
+                        <select id="teachersAttendanceTeacherSelect" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f8f9fa;">
+                            <option value="">كل المعلمين</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">التاريخ</label>
+                        <input type="date" id="teachersAttendanceDate" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                    </div>
+                    <button onclick="loadTeachersAttendanceView()" class="search-btn">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>سجل الحضور</h3>
+                </div>
+                <div id="teachersAttendanceTableContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Students Attendance Section -->
+        <div id="studentsAttendanceSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-tasks"></i>
+                حضور الطلاب
+            </h2>
+
+            <div
+                style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">الفصل</label>
+                        <select id="studentsAttendanceClassSelect" onchange="populateStudentSelect(this.value)"
+                            class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                            <option value="">اختر الفصل</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">الطالب (اختياري)</label>
+                        <select id="studentsAttendanceStudentSelect" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f8f9fa;"
+                            disabled>
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">التاريخ</label>
+                        <input type="date" id="studentsAttendanceDate" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                    </div>
+                    <button onclick="loadStudentsAttendanceView()" class="search-btn">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Summary for Selected Day/Class -->
+            <div id="attendanceStatsSummary"
+                style="display: none; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div
+                    style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid #2ecc71;">
+                    <div style="color: #7f8c8d; font-size: 12px; margin-bottom: 5px;">حضور</div>
+                    <div id="statPresent" style="font-size: 20px; font-weight: bold; color: #2c3e50;">0</div>
+                </div>
+                <div
+                    style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid #e74c3c;">
+                    <div style="color: #7f8c8d; font-size: 12px; margin-bottom: 5px;">غياب</div>
+                    <div id="statAbsent" style="font-size: 20px; font-weight: bold; color: #2c3e50;">0</div>
+                </div>
+                <div
+                    style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid #f1c40f;">
+                    <div style="color: #7f8c8d; font-size: 12px; margin-bottom: 5px;">تأخير</div>
+                    <div id="statLate" style="font-size: 20px; font-weight: bold; color: #2c3e50;">0</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>سجل الحضور</h3>
+                </div>
+                <div id="studentsAttendanceTableContent">
+                    <div class="empty-state">
+                        <i class="fas fa-search" style="font-size: 48px; color: #cbd5e0; margin-bottom: 15px;"></i>
+                        <h3>اختر التاريخ والفصل</h3>
+                        <p>لعرض سجل الحضور</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Announcements Section -->
+        <div id="announcementsSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-bullhorn"></i>
+                الإعلانات المدرسية
+            </h2>
+            <div class="quick-actions">
+                <div class="action-btn" onclick="showAnnouncementModal()">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>إنشاء إعلان</h3>
+                    <p>نشر رسالة لجميع مستخدمي المنصة</p>
+                </div>
+            </div>
+            <div id="announcementsContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Class Schedules Section -->
+        <div id="schedulesSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-calendar-alt"></i>
+                الجداول الدراسية
+            </h2>
+            <div class="quick-actions">
+                <div class="action-btn" onclick="showAddScheduleModal()">
+                    <i class="fas fa-calendar-plus"></i>
+                    <h3>إضافة جدول</h3>
+                    <p>إدارة جداول الحصص الأسبوعية</p>
+                </div>
+            </div>
+            <div id="schedulesContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. Analytics Section -->
+        <div id="analyticsSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                الإحصائيات والتحليلات
+            </h2>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                <div
+                    style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin-bottom: 15px;"><i class="fas fa-user-check" style="color: #2ecc71;"></i> حضور
+                        الطلاب (أسبوعي)</h3>
+                    <canvas id="studentAttendanceChart" height="200"></canvas>
+                </div>
+                <div
+                    style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin-bottom: 15px;"><i class="fas fa-chalkboard-teacher" style="color: #3498db;"></i>
+                        حضور المعلمين (أسبوعي)</h3>
+                    <canvas id="teacherAttendanceChart" height="200"></canvas>
+                </div>
+            </div>
+            <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <h3 style="margin-bottom: 15px;"><i class="fas fa-chart-pie" style="color: #9b59b6;"></i> توزيع الغياب
+                    حسب الفصول</h3>
+                <canvas id="classAttendanceChart" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- 10. Activity Logs Section -->
+        <div id="logsSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-history"></i>
+                سجل النشاطات
+            </h2>
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>تحركات النظام</h3>
+                </div>
+                <div id="activityLogsTableContent">
                     <div class="loading">
                         <div class="spinner"></div>
                     </div>
@@ -1813,6 +2235,45 @@
         </div>
     </div>
 
+    <!-- Data Management Section -->
+    <div id="dataManagementSection" style="display: none;">
+        <!-- Promotion Section -->
+        <div
+            style="background: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 20px; color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px;">
+                <i class="fas fa-arrow-up"></i> ترقية الدفعات
+            </h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">قم بترقية طلاب صف كامل إلى الصف التالي وحذف البيانات القديمة
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="promotionFromGrade">ترقية من الصف</label>
+                    <select id="promotionFromGrade" class="form-control">
+                        <option value="">-- اختر الصف --</option>
+                        <option value="الأول الإعدادي">الأول الإعدادي → الثاني الإعدادي</option>
+                        <option value="الثاني الإعدادي">الثاني الإعدادي → الثالث الإعدادي</option>
+                        <option value="الأول الثانوي">الأول الثانوي → الثاني الثانوي</option>
+                        <option value="الثاني الثانوي">الثاني الثانوي → الثالث الثانوي</option>
+                        <option value="ترم_أول">ترقية للترم الثاني (نفس الصف)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="promotionType">نوع الترقية</label>
+                    <select id="promotionType" class="form-control">
+                        <option value="سنوية">ترقية سنوية (حذف الدرجات والجداول)</option>
+                        <option value="ترمية">ترقية للترم الثاني (الاحتفاظ ببعض البيانات)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="showPromotionConfirmation()"
+                style="width: 100%; padding: 12px; font-size: 16px;">
+                <i class="fas fa-arrow-up"></i> ترقية الدفعة
+            </button>
+        </div>
+    </div>
+
     <!-- View Class Details Modal -->
     <div id="viewClassDetailsModal" class="modal">
         <div class="modal-content" style="max-width: 700px;">
@@ -1834,8 +2295,142 @@
         </div>
     </div>
 
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">تعديل بيانات الطالب</h3>
+                <button class="close-btn" onclick="closeModal('editStudentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editStudentId">
+                <div class="form-group">
+                    <label for="editStudentFullName">الاسم الكامل</label>
+                    <input type="text" id="editStudentFullName" class="form-control" placeholder="أدخل الاسم الكامل">
+                </div>
+                <div class="form-group">
+                    <label for="editStudentEmail">البريد الإلكتروني</label>
+                    <input type="email" id="editStudentEmail" class="form-control" placeholder="البريد الإلكتروني">
+                </div>
+                <div class="form-group">
+                    <label for="editStudentCode">الرقم الأكاديمي</label>
+                    <input type="text" id="editStudentCode" class="form-control" placeholder="الرقم الأكاديمي">
+                </div>
+                <div class="form-group">
+                    <label for="editStudentClassSelect">الفصل</label>
+                    <select id="editStudentClassSelect" class="form-control">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editStudentModal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="updateStudentFromModal()">تحديث البيانات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Details Modal -->
+    <div id="teacherDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">تفاصيل المعلم والفصول</h3>
+                <button class="close-btn" onclick="closeModal('teacherDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="teacherDetailsContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('teacherDetailsModal')">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcement Modal -->
+    <div id="announcementModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">نشر إعلان جديد</h3>
+                <button class="close-btn" onclick="closeModal('announcementModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="announcementTitle">العنوان</label>
+                    <input type="text" id="announcementTitle" class="form-control" placeholder="عنوان الإعلان">
+                </div>
+                <div class="form-group">
+                    <label for="announcementBody">محتوى الإعلان</label>
+                    <textarea id="announcementBody" class="form-control" style="height: 150px; resize: none;"
+                        placeholder="اكتب تفاصيل الإعلان هنا..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="announcementTarget">موجه إلى</label>
+                    <select id="announcementTarget" class="form-control">
+                        <option value="all">الجميع</option>
+                        <option value="teachers">المعلمين فقط</option>
+                        <option value="students">الطلاب فقط</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('announcementModal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="publishAnnouncement()">نشر الآن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3 class="modal-title">إدارة الجدول الدراسي</h3>
+                <button class="close-btn" onclick="closeModal('scheduleModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="schedule-form"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>الفصل</label>
+                        <select id="schedClassSelect" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>اليوم</label>
+                        <select id="schedDay" class="form-control">
+                            <option value="الأحد">الأحد</option>
+                            <option value="الاثنين">الاثنين</option>
+                            <option value="الثلاثاء">الثلاثاء</option>
+                            <option value="الأربعاء">الأربعاء</option>
+                            <option value="الخميس">الخميس</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="scheduleGrid" style="overflow-x: auto;">
+                    <!-- Weekly Grid UI will be here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('scheduleModal')">إغلاق</button>
+                <button class="btn btn-primary" onclick="saveSchedule()">حفظ الجدول</button>
+            </div>
+        </div>
+    </div>
 
 
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- App Scripts -->
+    <script type="module" src="js/dashboardGuard.js"></script>
+    <script type="module" src="js/manager.js"></script>
+    <script type="module" src="js/dataManagement.js"></script>
 </body>
 
 </html>

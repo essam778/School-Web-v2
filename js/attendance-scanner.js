@@ -36,26 +36,83 @@ export function initScanner(elementId) {
 
     console.log("Initializing QR Scanner on element:", elementId);
 
-    // Initialize DOM elements relative to the document (assuming they exist in the dashboard)
+    // Ensure the element exists first
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.error('Scanner container element not found:', elementId);
+        return;
+    }
+
+    // Check if Html5QrcodeScanner is available with exponential backoff
+    const maxAttempts = 50; // Increased max attempts
+    let attempts = 0;
+
+    function checkAndInit() {
+        attempts++;
+
+        if (typeof window.Html5QrcodeScanner !== 'undefined') {
+            // Library loaded successfully
+            console.log('Html5QrcodeScanner library loaded on attempt:', attempts);
+            initializeScannerNow(elementId);
+        } else if (attempts < maxAttempts) {
+            // Keep trying with exponential backoff (up to 500ms)
+            const delay = Math.min(100 + (attempts * 50), 1000);
+            // console.log(`Attempt ${attempts}/${maxAttempts} - retrying in ${delay}ms`);
+            setTimeout(checkAndInit, delay);
+        } else {
+            // Give up after max attempts and show manual retry
+            console.error('Html5QrcodeScanner library failed to load after multiple attempts');
+            element.innerHTML = `
+                <div style="background: white; color: #e74c3c; text-align: center; padding: 30px 20px; border-radius: 10px; border: 2px dashed #e74c3c;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
+                    <h3 style="margin-bottom: 10px;">فشل تحميل الكاميرا</h3>
+                    <p style="margin-bottom: 15px;">لم نتمكن من تحميل مكتبة المسح. يرجى التحقق من الاتصال بالإنترنت.</p>
+                    <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-sync"></i> تحديث الصفحة
+                    </button>
+                </div>`;
+        }
+    }
+
+    checkAndInit();
+}
+
+function initializeScannerNow(elementId) {
+    // Initialize DOM elements relative to the document
     resultCard = document.getElementById('result-card');
     statusIcon = document.getElementById('status-icon');
     statusMessage = document.getElementById('status-message');
     studentNameEl = document.getElementById('student-name');
     scanTimeEl = document.getElementById('scan-time');
 
-    html5QrcodeScanner = new Html5QrcodeScanner(
-        elementId,
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true
-        },
-        /* verbose= */ false
-    );
+    try {
+        // Clear previous instance content if any
+        document.getElementById(elementId).innerHTML = '';
 
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    isScanning = true;
+        html5QrcodeScanner = new window.Html5QrcodeScanner(
+            elementId,
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                showTorchButtonIfSupported: true,
+                rememberLastUsedCamera: true
+            },
+            false // verbose
+        );
+
+        // Render without error catching as it returns void
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        isScanning = true;
+        console.log("QR Scanner initialized successfully!");
+    } catch (error) {
+        console.error("Error initializing scanner:", error);
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerHTML = `<div style="color: red; padding: 20px;">Error: ${error.message}</div>`;
+        }
+    }
 }
 
 /**
@@ -69,10 +126,15 @@ export async function stopScanner() {
             isScanning = false;
             console.log("QR Scanner stopped.");
         } catch (error) {
-            console.error("Failed to clear scanner", error);
+            console.warn("Scanner stop/clear warning:", error);
+            // Force clean up
+            html5QrcodeScanner = null;
+            isScanning = false;
         }
     }
 }
+
+
 
 function onScanSuccess(decodedText, decodedResult) {
     const currentTime = Date.now();
@@ -161,44 +223,85 @@ async function handleAttendance(studentUid) {
 
 // UI Helpers
 function showProcessingState() {
-    if (!resultCard) return;
+    if (!resultCard) {
+        resultCard = document.getElementById('result-card');
+        statusIcon = document.getElementById('status-icon');
+        statusMessage = document.getElementById('status-message');
+        studentNameEl = document.getElementById('student-name');
+        scanTimeEl = document.getElementById('scan-time');
+
+        if (!resultCard) return; // Still missing
+    }
+
     resultCard.style.display = 'block';
     resultCard.className = 'status-card';
-    statusIcon.className = 'fas fa-spinner fa-spin status-icon';
-    statusIcon.style.color = '#3498db';
-    statusMessage.textContent = 'Processing...';
-    studentNameEl.textContent = '';
-    scanTimeEl.textContent = '';
+    if (statusIcon) {
+        statusIcon.className = 'fas fa-spinner fa-spin status-icon';
+        statusIcon.style.color = '#3498db';
+    }
+    if (statusMessage) statusMessage.textContent = 'Processing...';
+    if (studentNameEl) studentNameEl.textContent = '';
+    if (scanTimeEl) scanTimeEl.textContent = '';
 }
 
 function showSuccess(name, message) {
-    if (!resultCard) return;
+    if (!resultCard) {
+        resultCard = document.getElementById('result-card');
+        // Try to recover
+        if (!statusIcon) statusIcon = document.getElementById('status-icon');
+        if (!statusMessage) statusMessage = document.getElementById('status-message');
+        if (!studentNameEl) studentNameEl = document.getElementById('student-name');
+        if (!scanTimeEl) scanTimeEl = document.getElementById('scan-time');
+
+        if (!resultCard) return;
+    }
+
     resultCard.style.display = 'block';
 
     if (message.includes('Already')) {
-        statusIcon.className = 'fas fa-info-circle status-icon';
-        statusIcon.style.color = '#f39c12';
-        statusMessage.style.color = '#f39c12';
+        if (statusIcon) {
+            statusIcon.className = 'fas fa-info-circle status-icon';
+            statusIcon.style.color = '#f39c12';
+        }
+        if (statusMessage) statusMessage.style.color = '#f39c12';
     } else {
-        statusIcon.className = 'fas fa-check-circle status-icon';
-        statusIcon.style.color = '#27ae60';
-        statusMessage.style.color = '#2c3e50';
+        if (statusIcon) {
+            statusIcon.className = 'fas fa-check-circle status-icon';
+            statusIcon.style.color = '#27ae60';
+        }
+        if (statusMessage) statusMessage.style.color = '#2c3e50';
     }
 
-    statusMessage.textContent = message;
-    studentNameEl.textContent = name;
+    if (statusMessage) statusMessage.textContent = message;
+    if (studentNameEl) studentNameEl.textContent = name;
 
     const now = new Date();
-    scanTimeEl.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+    if (scanTimeEl) {
+        scanTimeEl.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+    }
 }
 
 function showError(msg) {
-    if (!resultCard) return;
+    if (!resultCard) {
+        resultCard = document.getElementById('result-card');
+        // Try to recover other elements too
+        if (!statusIcon) statusIcon = document.getElementById('status-icon');
+        if (!statusMessage) statusMessage = document.getElementById('status-message');
+        if (!studentNameEl) studentNameEl = document.getElementById('student-name');
+        if (!scanTimeEl) scanTimeEl = document.getElementById('scan-time');
+
+        if (!resultCard) return;
+    }
+
     resultCard.style.display = 'block';
-    statusIcon.className = 'fas fa-times-circle status-icon';
-    statusIcon.style.color = '#c0392b';
-    statusMessage.textContent = 'Error Recording Attendance';
-    statusMessage.style.color = '#c0392b';
-    studentNameEl.textContent = msg;
-    scanTimeEl.textContent = '';
+    if (statusIcon) {
+        statusIcon.className = 'fas fa-times-circle status-icon';
+        statusIcon.style.color = '#c0392b';
+    }
+    if (statusMessage) {
+        statusMessage.textContent = 'Error Recording Attendance';
+        statusMessage.style.color = '#c0392b';
+    }
+    if (studentNameEl) studentNameEl.textContent = msg;
+    if (scanTimeEl) scanTimeEl.textContent = '';
 }

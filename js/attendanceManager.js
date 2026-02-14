@@ -9,22 +9,25 @@ async function startAttendanceScanning(teacherId, className) {
             async (scanData) => {
                 // Process successful scan
                 try {
-                    if (scanData.type !== 'student_attendance') {
-                        FirebaseHelpers.showToast('رمز QR غير صحيح لتسجيل الحضور', 'error');
-                        reject(new Error('Invalid QR code type'));
+                    // Extract student ID from QR code data (supports both formats)
+                    const studentId = scanData.studentId || scanData.s;
+                    
+                    if (!studentId) {
+                        FirebaseHelpers.showToast('رمز QR غير صحيح', 'error');
+                        reject(new Error('Invalid QR code format'));
                         return;
                     }
                     
                     // Log attendance to Firebase
                     const result = await FirebaseHelpers.logAttendance(
-                        scanData.studentId,
-                        scanData.studentName || `Student ${scanData.studentId}`,
+                        studentId,
+                        scanData.studentName || `Student ${studentId}`,
                         className,
                         teacherId
                     );
                     
                     if (result.success) {
-                        FirebaseHelpers.showToast(`تم تسجيل حضور الطالب ${scanData.studentName || scanData.studentId}`, 'success');
+                        FirebaseHelpers.showToast(`تم تسجيل حضور الطالب ${scanData.studentName || studentId}`, 'success');
                         resolve(result);
                     } else {
                         FirebaseHelpers.showToast('فشل في تسجيل الحضور', 'error');

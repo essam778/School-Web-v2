@@ -5,22 +5,34 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-
 // Load QR code library dynamically
 async function loadQRLibrary() {
     return new Promise((resolve, reject) => {
+        // Check if library is already loaded
         if (window.QRCode) {
             resolve(window.QRCode);
             return;
         }
         
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        script.onload = () => {
-            console.log('QRCode.js loaded successfully');
-            resolve(window.QRCode);
-        };
-        script.onerror = () => {
-            console.error('Failed to load QRCode.js');
-            reject(new Error('Failed to load QRCode.js library'));
-        };
-        document.head.appendChild(script);
+        // Wait a bit for the library to load from page script tags
+        setTimeout(() => {
+            if (window.QRCode) {
+                console.log('QRCode.js already loaded from page');
+                resolve(window.QRCode);
+                return;
+            }
+            
+            // If still not loaded, try loading from alternative CDN
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+            script.onload = () => {
+                console.log('QRCode.js loaded successfully from CDN');
+                resolve(window.QRCode);
+            };
+            script.onerror = () => {
+                console.error('Failed to load QRCode.js from CDN');
+                reject(new Error('Failed to load QRCode.js library'));
+            };
+            script.timeout = 10000; // 10 second timeout
+            document.head.appendChild(script);
+        }, 100);
     });
 }
 
@@ -40,14 +52,14 @@ async function generateStudentQRCode(qrData) {
         // Generate QR code data string
         const qrString = typeof qrData === 'string' ? qrData : JSON.stringify(qrData);
         
-        // Create QR code
-        new QRCode(container, {
+        // Create QR code with optimized settings
+        new window.QRCode(container, {
             text: qrString,
-            width: 256,
-            height: 256,
+            width: 300,
+            height: 300,
             colorDark: "#000000",
             colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
+            correctLevel: window.QRCode.CorrectLevel.M  // Use M instead of H to reduce data size requirements
         });
         
         return container;
@@ -75,9 +87,8 @@ async function generateStudentQRCode(qrData) {
 // Generate simple QR code text (for cases where library fails)
 function generateSimpleQRCodeText(studentId) {
     return JSON.stringify({
-        type: 'student_attendance',
-        studentId: studentId,
-        timestamp: Date.now()
+        s: studentId,  // Shortened key
+        t: Date.now()  // Shortened key
     });
 }
 
@@ -92,19 +103,19 @@ async function getStudentQRCodeDataURL(studentId) {
             tempDiv.style.position = 'absolute';
             document.body.appendChild(tempDiv);
             
+            // Use shortened data format to reduce QR code size
             const qrData = {
-                type: 'student_attendance',
-                studentId: studentId,
-                timestamp: Date.now()
+                s: studentId,
+                t: Date.now()
             };
             
-            new QRCode(tempDiv, {
+            new window.QRCode(tempDiv, {
                 text: JSON.stringify(qrData),
-                width: 256,
-                height: 256,
+                width: 300,
+                height: 300,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+                correctLevel: window.QRCode.CorrectLevel.M
             });
             
             setTimeout(() => {
@@ -136,17 +147,17 @@ function verifyQRCodePayload(payload) {
     try {
         const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
         
-        if (!data.type || data.type !== 'student_attendance') {
-            return { valid: false, error: 'Invalid QR code type' };
-        }
+        // Support both new shortened format (s, t) and old format (studentId, timestamp)
+        const studentId = data.s || data.studentId;
+        const timestamp = data.t || data.timestamp;
         
-        if (!data.studentId) {
+        if (!studentId) {
             return { valid: false, error: 'Missing student ID' };
         }
         
         // Check timestamp (within last 24 hours)
         const now = Date.now();
-        const payloadTime = data.timestamp || now;
+        const payloadTime = timestamp || now;
         const timeDiff = Math.abs(now - payloadTime);
         const maxTimeDiff = 24 * 60 * 60 * 1000;
         
@@ -154,7 +165,7 @@ function verifyQRCodePayload(payload) {
             return { valid: false, error: 'QR code expired' };
         }
         
-        return { valid: true, data: data };
+        return { valid: true, data: { studentId, timestamp: payloadTime } };
     } catch (error) {
         return { valid: false, error: 'Invalid QR code format: ' + error.message };
     }

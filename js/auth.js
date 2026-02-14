@@ -29,7 +29,7 @@ if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
     setupPasswordToggle();
     loadRememberedEmail();
-    
+
     // التحقق من حالة المستخدم عند تحميل صفحة التسجيل
     checkAuthStateOnLoginPage();
 }
@@ -37,77 +37,77 @@ if (loginForm) {
 // ===== LOGIN HANDLER =====
 async function handleLogin(e) {
     e.preventDefault();
-    
+
     if (isProcessing) return;
-    
+
     const roleElement = document.getElementById('role');
     const emailElement = document.getElementById('email');
     const passwordElement = document.getElementById('password');
     const rememberMeElement = document.getElementById('rememberMe');
-    
+
     const role = roleElement ? roleElement.value : null;
     const email = emailElement ? emailElement.value.trim() : null;
     const password = passwordElement ? passwordElement.value : null;
     const rememberMe = rememberMeElement ? rememberMeElement.checked : false;
-    
+
     // التحقق الأساسي
     if (!role) {
         showError('يرجى اختيار نوع الحساب');
         return;
     }
-    
+
     if (!email || !password) {
         showError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
         return;
     }
-    
+
     if (!validateEmail(email)) {
         showError('البريد الإلكتروني غير صحيح');
         return;
     }
-    
+
     try {
         isProcessing = true;
         showLoading(true);
         hideError();
-        
+
         console.log('🔄 جاري تسجيل الدخول...');
-        
+
         // 1. البحث عن المستخدم في Firestore
         const usersQuery = query(
             collection(db, 'users'),
             where('email', '==', email),
             where('role', '==', role)
         );
-        
+
         const querySnapshot = await getDocs(usersQuery);
-        
+
         if (querySnapshot.empty) {
             throw new Error('لم يتم العثور على حساب بهذا البريد والدور');
         }
-        
+
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-        
+
         // 2. التحقق من كلمة المرور
         if (userData.password !== password) {
             throw new Error('كلمة المرور غير صحيحة');
         }
-        
+
         // 3. التحقق من أن الحساب نشط
         if (userData.isActive === false) {
             throw new Error('الحساب غير نشط');
         }
-        
+
         console.log('✅ تسجيل الدخول ناجح:', userData.fullName);
-        
+
         // 4. حفظ البريد إذا كان "تذكرني" مفعل
         if (rememberMe) {
             localStorage.setItem('rememberedEmail', email);
         } else {
             localStorage.removeItem('rememberedEmail');
         }
-        
+
         // 5. حفظ بيانات الجلسة
         sessionStorage.setItem('currentUser', JSON.stringify({
             uid: userDoc.id,
@@ -116,7 +116,7 @@ async function handleLogin(e) {
             role: userData.role,
             timestamp: Date.now()
         }));
-        
+
         // 6. تحديث وقت الدخول الأخير
         try {
             await updateDoc(doc(db, 'users', userDoc.id), {
@@ -125,10 +125,10 @@ async function handleLogin(e) {
         } catch (e) {
             console.warn('⚠️  ملاحظة: ', e.message);
         }
-        
+
         // 7. التوجيه بناءً على الدور
         redirectToDashboard(userData.role);
-        
+
     } catch (error) {
         console.error('❌ خطأ:', error.message);
         showError(error.message || 'حدث خطأ أثناء تسجيل الدخول');
@@ -141,14 +141,14 @@ async function handleLogin(e) {
 function redirectToDashboard(role) {
     const dashboards = {
         'manager': 'manager_dashboard.html',
-        'teacher': 'teacher_dashboard.html', 
+        'teacher': 'teacher_dashboard.html',
         'student': 'student_dashboard.html',
         'admin': 'admin_dashboard.html'
     };
-    
+
     const targetPage = dashboards[role] || 'student_dashboard.html';
     console.log('🚀 تحويل إلى:', targetPage);
-    
+
     // استخدام setTimeout لتجنب أي تعارض
     setTimeout(() => {
         window.location.href = targetPage;
@@ -160,16 +160,17 @@ async function checkAuthStateOnLoginPage() {
     try {
         // Check if user session exists
         const currentUser = sessionStorage.getItem('currentUser');
-        
+
         if (currentUser) {
             const userData = JSON.parse(currentUser);
             console.log('👤 User already logged in:', userData.email);
-            
+
             // Only redirect if we're on the login page
-            const isLoginPage = window.location.pathname.includes('index.html') || 
-                               window.location.pathname === '/' ||
-                               window.location.pathname.endsWith('/');
-            
+            const isLoginPage = window.location.pathname.includes('index.html') ||
+                window.location.pathname.includes('login.html') ||
+                window.location.pathname === '/' ||
+                window.location.pathname.endsWith('/');
+
             if (isLoginPage) {
                 console.log('🔄 Auto-redirecting to dashboard...');
                 redirectToDashboard(userData.role);
@@ -200,7 +201,7 @@ function validateEmail(email) {
 function setupPasswordToggle() {
     const toggleBtn = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');
-    
+
     if (toggleBtn && passwordInput) {
         toggleBtn.addEventListener('click', () => {
             const type = passwordInput.type === 'password' ? 'text' : 'password';
@@ -214,9 +215,9 @@ function setupPasswordToggle() {
 function loadRememberedEmail() {
     const emailInput = document.getElementById('email');
     const rememberCheckbox = document.getElementById('rememberMe');
-    
+
     if (!emailInput) return;
-    
+
     const savedEmail = localStorage.getItem('rememberedEmail');
     if (savedEmail) {
         emailInput.value = savedEmail;
@@ -230,8 +231,8 @@ function showLoading(show) {
     if (loadingEl) loadingEl.style.display = show ? 'block' : 'none';
     if (loginBtn) {
         loginBtn.disabled = show;
-        loginBtn.innerHTML = show 
-            ? '<span>جاري الدخول...</span>' 
+        loginBtn.innerHTML = show
+            ? '<span>جاري الدخول...</span>'
             : '<span>تسجيل الدخول</span><i class="fas fa-arrow-left"></i>';
     }
 }
@@ -248,7 +249,7 @@ function hideError() {
 }
 
 // ===== GLOBAL LOGOUT =====
-window.logoutUser = async function() {
+window.logoutUser = async function () {
     try {
         sessionStorage.removeItem('currentUser');
         window.location.href = 'index.html';
