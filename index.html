@@ -23,10 +23,6 @@
         })();
     </script>
     <style>
-        :root {
-            /* Inherited from global.css */
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -601,12 +597,12 @@
 <body>
     <div class="bg-glow"></div>
 
-    <nav>
+    <nav class="navbar">
         <div class="logo">
             <i class="fas fa-graduation-cap"></i>
             <span>إتقان التعليمي</span>
         </div>
-        <button class="mobile-toggle" onclick="toggleMenu()" aria-label="القائمة">
+        <button class="mobile-nav-toggle" onclick="toggleMenu()" aria-label="القائمة">
             <i class="fas fa-bars"></i>
         </button>
         <div class="nav-links" id="navLinks">
@@ -619,6 +615,7 @@
             </button>
             <a href="login.html" class="login-btn-top">دخول المنصة</a>
         </div>
+        <div class="sidebar-overlay" onclick="toggleMenu()"></div>
     </nav>
 
     <section class="hero">
@@ -765,32 +762,53 @@
 
         // Modal and Dynamic Script Loading
         let parentScriptLoaded = false;
-        window.openParentModal = () => {
-            document.getElementById('parentModal').classList.add('active');
+        window.openParentModal = async () => {
+            const modal = document.getElementById('parentModal');
+            modal.classList.add('active');
+
             if (!parentScriptLoaded) {
-                // Dynamically inject the module only when needed
-                const script = document.createElement('script');
-                script.type = 'module';
-                script.src = 'js/parentAuth.js';
-                document.body.appendChild(script);
-                parentScriptLoaded = true;
+                try {
+                    // Import and initialize parent auth module
+                    const module = await import('./js/parentAuth.js');
+                    if (module && module.initParentAuth) {
+                        await module.initParentAuth();
+                        parentScriptLoaded = true;
+                        console.log('✅ Parent auth module loaded successfully');
+                    } else {
+                        throw new Error('initParentAuth function not found in module');
+                    }
+                } catch (err) {
+                    console.error('❌ Failed to load parent auth:', err);
+                    // Show error to user
+                    const errorDiv = document.getElementById('parentLoginError');
+                    if (errorDiv) {
+                        errorDiv.textContent = 'حدث خطأ في تحميل نظام تسجيل الدخول. يرجى تحديث الصفحة والمحاولة مرة أخرى.';
+                        errorDiv.style.display = 'block';
+                    }
+                }
             }
         };
         window.closeParentModal = () => document.getElementById('parentModal').classList.remove('active');
 
         // Nav Scroll Effect
         window.addEventListener('scroll', () => {
-            const nav = document.querySelector('nav');
+            const nav = document.querySelector('.navbar');
             const scrolled = window.scrollY > 50;
-            nav.style.padding = scrolled ? '15px 8%' : '20px 8%';
-            nav.style.background = scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(15, 23, 42, 0.8)';
-            if (scrolled) nav.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
-            else nav.style.boxShadow = 'none';
+            if (nav) {
+                nav.style.padding = scrolled ? '15px 8%' : '20px 8%';
+                nav.style.background = scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(15, 23, 42, 0.8)';
+                if (scrolled) nav.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+                else nav.style.boxShadow = 'none';
+            }
         });
 
         function toggleMenu() {
             const navLinks = document.getElementById('navLinks');
-            if (window.innerWidth <= 968) navLinks.classList.toggle('active');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (window.innerWidth <= 1024) {
+                navLinks.classList.toggle('active');
+                if (overlay) overlay.classList.toggle('active');
+            }
         }
     </script>
 </body>

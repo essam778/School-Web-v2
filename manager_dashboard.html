@@ -25,16 +25,23 @@
 
         /* Navbar */
         .navbar {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(15px);
             color: white;
-            padding: 15px 30px;
+            padding: 10px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             position: sticky;
             top: 0;
             z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .navbar.scrolled {
+            padding: 5px 30px;
+            background: rgba(15, 23, 42, 0.98);
         }
 
         .navbar-brand {
@@ -127,12 +134,25 @@
 
         /* Welcome Section */
         .welcome-section {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 20px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .welcome-section h2 {
@@ -516,7 +536,7 @@
             }
         }
 
-        /* Responsive */
+        /* Responsive - Mobile First Approach */
         @media (max-width: 1200px) {
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -528,6 +548,10 @@
         }
 
         @media (max-width: 992px) {
+            .navbar {
+                padding: 10px 20px;
+            }
+
             .stats-grid {
                 grid-template-columns: 1fr;
             }
@@ -546,31 +570,78 @@
         }
 
         @media (max-width: 768px) {
+
+            /* Navbar Mobile */
             .navbar {
-                flex-direction: column;
-                gap: 15px;
+                padding: 8px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .navbar-brand {
+                gap: 10px;
+            }
+
+            .navbar-brand i {
+                font-size: 22px;
+            }
+
+            .navbar-brand h1 {
+                font-size: 16px;
+            }
+
+            /* User Menu Mobile */
+            .user-menu {
+                width: 100%;
+                justify-content: space-between;
+                gap: 10px;
+                order: 3;
+                padding-top: 10px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .user-info {
+                display: none !important;
+            }
+
+            .theme-toggle-btn {
+                width: 35px;
+                height: 35px;
+            }
+
+            .logout-btn {
+                flex: 1;
+                justify-content: center;
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+
+            /* Container */
+            .container {
                 padding: 15px;
             }
 
-            .container {
-                padding: 20px 15px;
+            /* Welcome Section */
+            .welcome-section {
+                padding: 20px;
+                text-align: center;
+                margin-bottom: 20px;
             }
 
+            .welcome-section h2 {
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+
+            .welcome-section p {
+                font-size: 13px;
+            }
+
+            /* Stats Grid */
             .stats-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .quick-actions {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            table {
-                font-size: 12px;
-            }
-
-            th,
-            td {
-                padding: 8px 10px;
+                gap: 15px;
+                margin-bottom: 20px;
             }
 
             .stat-card {
@@ -588,65 +659,23 @@
                 font-size: 28px;
             }
 
+            .stat-info h3 {
+                font-size: 13px;
+            }
+
+            /* Quick Actions */
+            .quick-actions {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
             .action-btn {
                 padding: 20px 15px;
             }
 
             .action-btn i {
                 font-size: 32px;
-            }
-
-            .table-header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-card {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .stat-info {
-                text-align: center;
-            }
-
-            .table-actions {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .icon-btn {
-                padding: 8px;
-            }
-
-            .user-menu {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .logout-btn {
-                width: 100%;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .navbar-brand h1 {
-                font-size: 18px;
-            }
-
-            .section-title {
-                font-size: 18px;
-            }
-
-            .stat-info .number {
-                font-size: 24px;
+                margin-bottom: 10px;
             }
 
             .action-btn h3 {
@@ -654,7 +683,148 @@
             }
 
             .action-btn p {
+                font-size: 11px;
+            }
+
+            /* Tables */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table {
                 font-size: 12px;
+                min-width: 600px;
+            }
+
+            th,
+            td {
+                padding: 10px 12px;
+                white-space: nowrap;
+            }
+
+            .table-header {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .table-header h3 {
+                font-size: 16px;
+            }
+
+            /* Section Titles */
+            .section-title {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+
+            /* Navbar Ultra Mobile */
+            .navbar {
+                padding: 8px 10px;
+            }
+
+            .navbar-brand h1 {
+                font-size: 14px;
+            }
+
+            .navbar-brand i {
+                font-size: 20px;
+            }
+
+            /* Welcome Section */
+            .welcome-section {
+                padding: 15px;
+            }
+
+            .welcome-section h2 {
+                font-size: 18px;
+            }
+
+            /* Quick Actions - Single Column */
+            .quick-actions {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            /* Stats Card */
+            .stat-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .stat-info {
+                text-align: center;
+            }
+
+            .stat-info .number {
+                font-size: 24px;
+            }
+
+            /* User Menu */
+            .user-menu {
+                gap: 8px;
+            }
+
+            .logout-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .theme-toggle-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            /* Table Actions */
+            .table-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .icon-btn {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+
+            /* Container */
+            .container {
+                padding: 10px;
+            }
+
+            /* Section Title */
+            .section-title {
+                font-size: 16px;
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-brand h1 {
+                display: none;
+            }
+
+            .stat-info h3 {
+                font-size: 12px;
+            }
+
+            .action-btn h3 {
+                font-size: 13px;
+            }
+
+            .action-btn p {
+                font-size: 10px;
+            }
+
+            .action-btn i {
+                font-size: 28px;
             }
         }
     </style>
@@ -2431,6 +2601,20 @@
     <script type="module" src="js/dashboardGuard.js"></script>
     <script type="module" src="js/manager.js"></script>
     <script type="module" src="js/dataManagement.js"></script>
+
+    <script>
+        // Navbar scroll effect for better UX
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
